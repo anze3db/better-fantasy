@@ -96,6 +96,17 @@
   }
   header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
   header .right { display: flex; gap: 8px; align-items: center; }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    background: transparent; border: 1px solid transparent; border-radius: 8px;
+    padding: 6px 14px; font: inherit; font-size: 13px; color: var(--muted);
+    cursor: pointer;
+  }
+  .tab:hover { background: var(--soft); color: var(--text); }
+  .tab[aria-selected="true"] {
+    background: var(--accent-soft); color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
   button {
     background: var(--panel); color: var(--text); border: 1px solid var(--border);
     border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer;
@@ -146,6 +157,30 @@
   tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--soft); }
+  tbody tr.is-you { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  tbody tr.is-you:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  tbody tr.is-you .player-name::after {
+    content: "you";
+    display: inline-block; margin-left: 6px;
+    font-size: 9px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--accent);
+    border: 1px solid currentColor; border-radius: 3px; padding: 0 4px;
+    vertical-align: 2px;
+  }
+  /* fantasy "Season — overall" mode hides event + tier columns */
+  table.overall-mode th:nth-child(3), table.overall-mode td:nth-child(3),
+  table.overall-mode th:nth-child(5), table.overall-mode td:nth-child(5),
+  table.overall-mode th:nth-child(6), table.overall-mode td:nth-child(6),
+  table.overall-mode th:nth-child(7), table.overall-mode td:nth-child(7) {
+    display: none;
+  }
+  /* bracket "Season — overall" mode hides the picks column (now col 3) */
+  table.bracket-overall th:nth-child(3), table.bracket-overall td:nth-child(3) {
+    display: none;
+  }
+  /* "you" row pinned to the top of a leaderboard when not naturally on the page */
+  tbody tr.self-pinned td { border-bottom: 2px solid var(--accent); }
+  tbody tr.self-pinned + tr td { padding-top: 16px; }
   .rank { font-variant-numeric: tabular-nums; font-weight: 600; width: 50px; }
   .pts { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .pts-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
@@ -301,6 +336,71 @@
   .sd-stat-label { font-size: 11px; color: var(--muted); }
   .sd-stat-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .sd-empty { color: var(--muted); font-size: 13px; }
+
+  /* bracket detail dialog */
+  #bracket-detail { max-width: 600px; }
+  .bd-header {
+    padding: 22px 24px; border-bottom: 1px solid var(--border);
+  }
+  .bd-name { font-size: 18px; font-weight: 700; }
+  .bd-meta { font-size: 13px; color: var(--muted); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .bd-meta strong { color: var(--text); }
+  .bd-stage { padding: 14px 24px; border-bottom: 1px solid var(--border); }
+  .bd-stage:last-child { border-bottom: none; }
+  .bd-stage h3 {
+    margin: 0 0 10px; font-size: 11px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .bd-stage h3 .stage-summary { color: var(--text); font-weight: 600; letter-spacing: .03em; text-transform: none; font-size: 11px; }
+  .bd-heat {
+    display: grid;
+    grid-template-columns: 64px 1fr 28px 1fr;
+    gap: 8px; align-items: center;
+    padding: 6px 0; border-top: 1px dashed var(--border);
+  }
+  .bd-stage .bd-heat:first-of-type { border-top: none; }
+  .bd-heat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .bd-pick {
+    display: flex; gap: 8px; align-items: center; min-width: 0;
+    padding: 6px 8px; border-radius: 6px; background: var(--soft);
+  }
+  .bd-pick.correct { background: color-mix(in srgb, var(--tier-a) 14%, var(--soft)); }
+  .bd-pick.wrong { background: color-mix(in srgb, var(--warn) 14%, var(--soft)); opacity: .85; }
+  .bd-pick.empty { background: transparent; color: var(--muted); font-size: 12px; padding: 6px 8px; }
+  .bd-pick img {
+    width: 28px; height: 28px; border-radius: 50%;
+    object-fit: cover; background: var(--avatar-bg);
+  }
+  .bd-pick .name { font-size: 12px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bd-pick .seed { font-size: 10px; color: var(--muted); margin-left: 4px; }
+  .bd-result {
+    text-align: center; font-size: 14px; font-weight: 700;
+  }
+  .bd-result.correct { color: var(--tier-a); }
+  .bd-result.wrong { color: var(--warn); }
+  .bd-result.pending { color: var(--muted); font-size: 11px; font-weight: 500; }
+  .bd-side-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+
+  /* bracket leaderboard inline picks */
+  .bp-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bp-pick {
+    position: relative; width: 32px; height: 32px;
+    border-radius: 50%; overflow: hidden; background: var(--avatar-bg);
+    border: 2px solid var(--muted); flex-shrink: 0;
+  }
+  .bp-pick.correct { border-color: var(--tier-a); }
+  .bp-pick.wrong   { border-color: var(--warn); opacity: .55; }
+  .bp-pick.pending { border-color: var(--border); }
+  .bp-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bp-pick .stage-tag {
+    position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 8px; font-weight: 700; padding: 0 4px; line-height: 11px;
+  }
+  .bp-summary { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .bp-summary strong { color: var(--text); font-variant-numeric: tabular-nums; }
   .dialog-body { padding: 22px 24px; }
   .dialog-body h2 { margin: 0 0 4px; font-size: 16px; }
   .dialog-body p { color: var(--muted); margin: 0 0 18px; }
@@ -391,13 +491,48 @@
     .sd-header { padding: 18px 18px; gap: 12px; }
     .sd-photo { width: 60px; height: 60px; font-size: 20px; }
     .sd-section { padding: 14px 18px; }
+    #bracket-detail { max-width: 100%; width: calc(100% - 24px); }
+    .bd-heat { grid-template-columns: 56px 1fr 26px 1fr; gap: 6px; font-size: 11px; }
+    .bd-pick img { width: 24px; height: 24px; }
+
+    /* bracket leaderboard on mobile: rank/user/points on the top row, picks below full-width */
+    #bracket-ranking thead { display: none; }
+    #bracket-ranking, #bracket-ranking tbody, #bracket-ranking tr, #bracket-ranking td { display: block; }
+    #bracket-ranking tbody tr {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "rank user pts"
+        "picks picks picks";
+      gap: 6px 12px;
+      padding: 14px 14px;
+      border-bottom: 1px solid var(--border);
+      align-items: start;
+      min-width: 0;
+    }
+    #bracket-ranking tbody td { padding: 0; border: none; min-width: 0; }
+    #bracket-ranking tbody td:nth-child(1) { grid-area: rank; font-size: 18px; align-self: center; }
+    #bracket-ranking tbody td:nth-child(2) { grid-area: user; align-self: center; overflow: hidden; }
+    #bracket-ranking tbody td:nth-child(2) .player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #bracket-ranking tbody td:nth-child(3) { grid-area: picks; }
+    #bracket-ranking tbody td:nth-child(4) { grid-area: pts; align-self: center; text-align: right; }
+    /* in overall mode there's no picks cell to render anyway; collapse the 2nd row */
+    table.bracket-overall.bracket-overall tbody tr {
+      grid-template-areas: "rank user pts";
+    }
+    .bp-pick { width: 28px; height: 28px; border-width: 2px; }
   }
+  .view[hidden] { display: none; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Better Fantasy</h1>
+  <nav class="tabs" role="tablist">
+    <button class="tab" data-view="fantasy" role="tab">Fantasy</button>
+    <button class="tab" data-view="brackets" role="tab">Brackets</button>
+  </nav>
   <div class="right">
     <span id="user-line" class="meta-line"></span>
     <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
@@ -414,6 +549,7 @@
 </header>
 
 <main>
+  <div class="view view-fantasy">
   <div class="panel controls" id="controls" hidden>
     <div class="field">
       <label for="league-select">League</label>
@@ -449,7 +585,52 @@
       <button id="next-page">Next</button>
     </div>
   </div>
+  </div>
+
+  <div class="view view-brackets" hidden>
+    <div class="panel controls" id="bracket-controls" hidden>
+      <div class="field">
+        <label for="bracket-tour-select">Tour</label>
+        <select id="bracket-tour-select"></select>
+      </div>
+      <div class="field">
+        <label for="bracket-league-select">League</label>
+        <select id="bracket-league-select"></select>
+      </div>
+      <div class="field">
+        <label for="bracket-event-select">Event</label>
+        <select id="bracket-event-select"></select>
+      </div>
+      <button id="bracket-refresh">Refresh</button>
+    </div>
+
+    <div id="bracket-status" class="status"></div>
+
+    <div class="panel" id="bracket-panel" hidden>
+      <table id="bracket-ranking">
+        <thead>
+          <tr>
+            <th class="rank">#</th>
+            <th>User</th>
+            <th>Late-stage picks</th>
+            <th class="pts" title="Per event, the API totals men's + women's bracket points together.">Points</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="pagination" id="bracket-pagination" hidden>
+        <span class="page-info">Page <span id="bracket-page-num">1</span></span>
+        <button id="bracket-prev-page">Prev</button>
+        <button id="bracket-next-page">Next</button>
+      </div>
+    </div>
+  </div>
 </main>
+
+<dialog id="bracket-detail">
+  <button class="sd-close" data-close aria-label="Close">×</button>
+  <div class="bd-body"></div>
+</dialog>
 
 <dialog id="surfer-detail">
   <button class="sd-close" data-close aria-label="Close">×</button>
@@ -481,6 +662,10 @@
         <label for="guid-input">User GUID</label>
         <input id="guid-input" name="guid" required spellcheck="false" autocomplete="off" placeholder="00000000-0000-0000-0000-000000000000" />
       </div>
+      <div class="field">
+        <label for="bracket-token-input">Bracket token (optional, for the Brackets tab)</label>
+        <textarea id="bracket-token-input" name="bracketToken" spellcheck="false" autocomplete="off" placeholder="userToken JWT from localStorage"></textarea>
+      </div>
       <div class="dialog-actions">
         <button type="button" id="settings-logout" class="danger" hidden>Log out</button>
         <span style="flex: 1"></span>
@@ -489,8 +674,10 @@
       </div>
       <p class="meta-line">
         How to find them manually: open <a href="https://fantasy.worldsurfleague.com" target="_blank" rel="noreferrer">fantasy.worldsurfleague.com</a> (logged in),
-        open DevTools → Application → Local Storage, and read the <code>wsl-game-token</code> entry.
-        It's a JSON object — copy <code>game_session_token</code> into the JWT field above and <code>guid</code> into the GUID field.
+        open DevTools → Application → Local Storage. Read the <code>wsl-game-token</code> entry —
+        it's a JSON object — copy <code>game_session_token</code> into the JWT field above and <code>guid</code> into the GUID field.
+        For brackets, copy the <code>userToken</code> entry's value into the bracket token field
+        (it only appears after you've used the brackets section of the WSL app at least once).
         The bookmarklet does this automatically.
       </p>
     </form>
@@ -509,9 +696,19 @@ const RANK_PAGE_SIZE = 10;
 const ASSETS = `${API}/static-assets/fantasy/static/build/images`;
 let IMG_VER = "0.05"; // overridden from translations feed if available
 
+// Active CT tournament. Both Men's and Women's brackets are exposed under the
+// same tournamentId; the difference is per-event: event.id (M) vs event.jointEventId (F).
+const ACTIVE_TOURNAMENT_ID = "74f5030f-952f-47ee-8b68-d3939a035674";
+const DISCIPLINES = [
+  { key: "M", label: "Men's CT" },
+  { key: "F", label: "Women's CT" },
+];
+
 const state = {
   token: null,
   userGuid: null,
+  bracketToken: null,
+  view: "fantasy",
   leagues: [],
   events: [],
   surfersByGameday: new Map(),
@@ -521,6 +718,16 @@ const state = {
   currentGamedayId: null,
   currentPage: 1,
   hasNextPage: false,
+  // brackets
+  bracketEventsByTournament: new Map(),     // tournamentId -> events[]
+  bracketLeaguesByTournament: new Map(),    // tournamentId -> leagues (flat list)
+  bracketEventFeeds: new Map(),             // eventId -> full feed
+  currentTournamentId: ACTIVE_TOURNAMENT_ID,
+  currentDiscipline: "M",                   // "M" | "F"
+  currentBracketLeagueId: "1",
+  currentBracketEventId: "overall",         // "overall" or an event/jointEvent UUID
+  currentBracketPage: 1,
+  bracketHasNextPage: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -531,9 +738,11 @@ function ingestHashCredentials() {
   const params = new URLSearchParams(window.location.hash.slice(1));
   const token = params.get("token");
   const guid = params.get("guid");
+  const bracket = params.get("bracket");
   if (!token || !guid) return false;
   localStorage.setItem("bf.token", token.trim());
   localStorage.setItem("bf.userGuid", guid.trim());
+  if (bracket) localStorage.setItem("bf.bracketToken", bracket.trim());
   // strip the hash so the token isn't sitting in the address bar / history
   history.replaceState(null, "", window.location.pathname + window.location.search);
   return true;
@@ -563,9 +772,27 @@ const ui = {
   guidInput: $("#guid-input"),
   cancelSettings: $("#settings-cancel"),
   logoutBtn: $("#settings-logout"),
+  bracketTokenInput: $("#bracket-token-input"),
   bookmarklet: $("#bookmarklet"),
   shareRow: $("#share-row"),
   shareLink: $("#share-link"),
+  tabs: document.querySelectorAll(".tab"),
+  viewFantasy: document.querySelector(".view-fantasy"),
+  viewBrackets: document.querySelector(".view-brackets"),
+  bracketControls: $("#bracket-controls"),
+  bracketTourSelect: $("#bracket-tour-select"),
+  bracketLeagueSelect: $("#bracket-league-select"),
+  bracketEventSelect: $("#bracket-event-select"),
+  bracketRefresh: $("#bracket-refresh"),
+  bracketStatus: $("#bracket-status"),
+  bracketPanel: $("#bracket-panel"),
+  bracketBody: $("#bracket-ranking tbody"),
+  bracketPagination: $("#bracket-pagination"),
+  bracketPageNum: $("#bracket-page-num"),
+  bracketPrev: $("#bracket-prev-page"),
+  bracketNext: $("#bracket-next-page"),
+  bracketDetail: $("#bracket-detail"),
+  bracketDetailBody: $("#bracket-detail .bd-body"),
 };
 
 // ------- bookmarklet generation -------
@@ -581,7 +808,10 @@ var data;try{data=JSON.parse(raw);}catch(e){alert('wsl-game-token is not valid J
 var token=data&&data.game_session_token;
 var guid=data&&data.guid;
 if(!token||!guid){alert('wsl-game-token is missing game_session_token or guid. Try logging out and back in.');return;}
-location.href=TARGET+'/#token='+encodeURIComponent(token)+'&guid='+encodeURIComponent(guid);
+var bracket=localStorage.getItem('userToken')||'';
+var qs='token='+encodeURIComponent(token)+'&guid='+encodeURIComponent(guid);
+if(bracket)qs+='&bracket='+encodeURIComponent(bracket);
+location.href=TARGET+'/#'+qs;
 })()`.replace(/\s*\n\s*/g, '');
   return "javascript:" + encodeURIComponent(src);
 }
@@ -594,7 +824,9 @@ ui.bookmarklet.addEventListener("click", (e) => {
 
 ui.shareLink.addEventListener("click", async () => {
   if (!state.token || !state.userGuid) return;
-  const url = `${window.location.origin}/#token=${encodeURIComponent(state.token)}&guid=${encodeURIComponent(state.userGuid)}`;
+  let hash = `token=${encodeURIComponent(state.token)}&guid=${encodeURIComponent(state.userGuid)}`;
+  if (state.bracketToken) hash += `&bracket=${encodeURIComponent(state.bracketToken)}`;
+  const url = `${window.location.origin}/#${hash}`;
   if (navigator.share) {
     try { await navigator.share({ url, title: "Better Fantasy connection link" }); return; } catch {}
   }
@@ -618,12 +850,29 @@ ui.themeToggle.addEventListener("click", () => {
 function loadConfig() {
   state.token = localStorage.getItem("bf.token");
   state.userGuid = localStorage.getItem("bf.userGuid");
+  state.bracketToken = localStorage.getItem("bf.bracketToken");
+  // restore bracket selection
+  const params = new URLSearchParams(window.location.search);
+  const bDisc = params.get("bdisc") || localStorage.getItem("bf.discipline");
+  if (bDisc === "F" || bDisc === "M") state.currentDiscipline = bDisc;
+  const bLeague = params.get("bleague") || localStorage.getItem("bf.bracketLeagueId");
+  if (bLeague) state.currentBracketLeagueId = bLeague;
+  const bEvent = params.get("bevent") || localStorage.getItem("bf.bracketEventId");
+  if (bEvent) state.currentBracketEventId = bEvent;
+  const bPage = Number(params.get("bpage") || localStorage.getItem("bf.bracketPage")) || 1;
+  state.currentBracketPage = bPage > 0 ? bPage : 1;
 }
-function saveConfig(token, guid) {
+function saveConfig(token, guid, bracketToken) {
   state.token = token.trim();
   state.userGuid = guid.trim();
   localStorage.setItem("bf.token", state.token);
   localStorage.setItem("bf.userGuid", state.userGuid);
+  if (bracketToken !== undefined) {
+    const t = (bracketToken || "").trim();
+    state.bracketToken = t || null;
+    if (t) localStorage.setItem("bf.bracketToken", t);
+    else localStorage.removeItem("bf.bracketToken");
+  }
 }
 function saveSelection({ pushHistory = false } = {}) {
   const lid = state.currentLeagueId;
@@ -646,19 +895,31 @@ function saveSelection({ pushHistory = false } = {}) {
 }
 function loadSelection() {
   const params = new URLSearchParams(window.location.search);
-  const fromUrl = (key) => {
+  const numFromUrl = (key) => {
     const v = params.get(key);
     const n = v == null ? null : Number(v);
     return Number.isFinite(n) && n > 0 ? n : null;
   };
-  const fromStorage = (key) => {
+  const numFromStorage = (key) => {
     const n = Number(localStorage.getItem(key));
     return Number.isFinite(n) && n > 0 ? n : null;
   };
+  const eventFromUrl = (() => {
+    const v = params.get("event");
+    if (v === "overall") return "overall";
+    const n = v == null ? null : Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
+  const eventFromStorage = (() => {
+    const v = localStorage.getItem("bf.gamedayId");
+    if (v === "overall") return "overall";
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
   return {
-    leagueId: fromUrl("league") ?? fromStorage("bf.leagueId"),
-    gamedayId: fromUrl("event") ?? fromStorage("bf.gamedayId"),
-    page: fromUrl("page") ?? 1,
+    leagueId: numFromUrl("league") ?? numFromStorage("bf.leagueId"),
+    gamedayId: eventFromUrl ?? eventFromStorage,
+    page: numFromUrl("page") ?? 1,
   };
 }
 
@@ -781,6 +1042,10 @@ function populateLeagueSelect() {
 }
 function populateEventSelect() {
   ui.eventSelect.innerHTML = "";
+  const overall = document.createElement("option");
+  overall.value = "overall";
+  overall.textContent = "Season — overall";
+  ui.eventSelect.appendChild(overall);
   for (const ev of state.events) {
     const opt = document.createElement("option");
     opt.value = String(ev.gameday_id);
@@ -797,6 +1062,9 @@ function populateEventSelect() {
 // ------- league load -------
 async function loadLeague() {
   if (!state.currentLeagueId || !state.currentGamedayId) return;
+  const rankingTable = document.getElementById("ranking");
+  rankingTable.classList.toggle("overall-mode", String(state.currentGamedayId) === "overall");
+  if (String(state.currentGamedayId) === "overall") return loadLeagueOverall();
   setStatus("Loading league rankings…");
   ui.rankingPanel.hidden = true;
   ui.rankingBody.innerHTML = "";
@@ -863,6 +1131,69 @@ async function loadLeague() {
   }
 }
 
+async function loadLeagueOverall() {
+  setStatus("Loading season standings…");
+  ui.rankingPanel.hidden = true;
+  ui.rankingBody.innerHTML = "";
+  try {
+    const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
+      opt_type: 2,
+      page_no: state.currentPage,
+      top_no: RANK_PAGE_SIZE,
+      league_id: state.currentLeagueId,
+      tour_id: TOUR_ID,
+      gameday_id: 1,
+      phaseid: 2,
+    });
+    const rows = ranks?.Value?.data ?? [];
+    state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
+    updatePagination();
+    if (!rows.length) {
+      ui.rankingPanel.hidden = false;
+      ui.rankingBody.innerHTML = `<tr><td colspan="7" class="empty">No standings yet.</td></tr>`;
+      setStatus("");
+      return;
+    }
+    renderOverallRows(rows);
+    ui.rankingPanel.hidden = false;
+    setStatus("");
+  } catch (err) {
+    setStatus(`Failed to load season standings: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+function renderOverallRows(rows) {
+  ui.rankingBody.innerHTML = "";
+  const sorted = [...rows].sort((a, b) => {
+    const ay = a.guid === state.userGuid ? 1 : 0;
+    const by = b.guid === state.userGuid ? 1 : 0;
+    return by - ay;
+  });
+  let pinnedYou = false;
+  for (const row of sorted) {
+    const tr = document.createElement("tr");
+    tr.dataset.userId = String(row.user_id);
+    if (row.guid && row.guid === state.userGuid) {
+      tr.classList.add("is-you");
+      if (!pinnedYou) { tr.classList.add("self-pinned"); pinnedYou = true; }
+    }
+    tr.innerHTML = `
+      <td class="rank">${row.rank ?? "—"}</td>
+      <td>
+        <div class="player-name">${escape(row.team_name || row.user_name || "—")}</div>
+        <div class="player-meta">${escape(row.user_name || "")}</div>
+      </td>
+      <td class="pts">—</td>
+      <td class="pts">${formatPts(row.overall_point)}</td>
+      <td class="tier-col" data-tier-label="Tier A"></td>
+      <td class="tier-col" data-tier-label="Tier B"></td>
+      <td class="tier-col" data-tier-label="Tier C"></td>
+    `;
+    ui.rankingBody.appendChild(tr);
+  }
+}
+
 function updatePagination() {
   const showPagination = state.currentPage > 1 || state.hasNextPage;
   ui.pagination.hidden = !showPagination;
@@ -873,9 +1204,20 @@ function updatePagination() {
 
 function renderSkeleton(rows) {
   ui.rankingBody.innerHTML = "";
-  for (const row of rows) {
+  // Promote the current-user row to the top of the page (matches brackets behaviour).
+  const sorted = [...rows].sort((a, b) => {
+    const ay = a.guid === state.userGuid ? 1 : 0;
+    const by = b.guid === state.userGuid ? 1 : 0;
+    return by - ay;
+  });
+  let pinnedYou = false;
+  for (const row of sorted) {
     const tr = document.createElement("tr");
     tr.dataset.userId = String(row.user_id);
+    if (row.guid && row.guid === state.userGuid) {
+      tr.classList.add("is-you");
+      if (!pinnedYou) { tr.classList.add("self-pinned"); pinnedYou = true; }
+    }
     tr.innerHTML = `
       <td class="rank">${row.rank ?? "—"}</td>
       <td>
@@ -1317,6 +1659,7 @@ ui.openSettings.addEventListener("click", () => {
   const loggedIn = !!(state.token && state.userGuid);
   ui.tokenInput.value = state.token || "";
   ui.guidInput.value = state.userGuid || "";
+  ui.bracketTokenInput.value = state.bracketToken || "";
   ui.shareRow.hidden = !loggedIn;
   ui.logoutBtn.hidden = !loggedIn;
   ui.settings.showModal();
@@ -1324,7 +1667,11 @@ ui.openSettings.addEventListener("click", () => {
 
 ui.logoutBtn.addEventListener("click", () => {
   if (!confirm("Log out and clear stored credentials on this device?")) return;
-  for (const k of ["bf.token", "bf.userGuid", "bf.leagueId", "bf.gamedayId"]) {
+  for (const k of [
+    "bf.token", "bf.userGuid", "bf.bracketToken",
+    "bf.leagueId", "bf.gamedayId",
+    "bf.bracketLeagueId", "bf.bracketEventId", "bf.discipline", "bf.bracketPage",
+  ]) {
     localStorage.removeItem(k);
   }
   // Also drop URL state so reload doesn't restore selections.
@@ -1336,10 +1683,17 @@ ui.settingsForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const token = ui.tokenInput.value.trim();
   const guid = ui.guidInput.value.trim();
+  const bracketToken = ui.bracketTokenInput.value.trim();
   if (!token || !guid) return;
-  saveConfig(token, guid);
+  saveConfig(token, guid, bracketToken);
   ui.settings.close();
   bootstrap();
+  // refresh brackets if it's the active view and a token is now present
+  if (state.view === "brackets" && state.bracketToken) {
+    state.bracketEventsByTournament.clear();
+    state.bracketLeaguesByTournament.clear();
+    bootstrapBrackets();
+  }
 });
 
 ui.leagueSelect.addEventListener("change", () => {
@@ -1349,7 +1703,8 @@ ui.leagueSelect.addEventListener("change", () => {
   loadLeague();
 });
 ui.eventSelect.addEventListener("change", () => {
-  state.currentGamedayId = Number(ui.eventSelect.value);
+  const v = ui.eventSelect.value;
+  state.currentGamedayId = v === "overall" ? "overall" : Number(v);
   state.currentPage = 1;
   saveSelection({ pushHistory: true });
   loadLeague();
@@ -1407,28 +1762,647 @@ window.addEventListener("unhandledrejection", (e) => {
 });
 
 window.addEventListener("popstate", () => {
+  // fantasy params
   const sel = loadSelection();
-  let changed = false;
+  let fantasyChanged = false;
   if (sel.leagueId && sel.leagueId !== state.currentLeagueId &&
       state.leagues.some((l) => l.user_leagueid === sel.leagueId)) {
     state.currentLeagueId = sel.leagueId;
     ui.leagueSelect.value = String(sel.leagueId);
-    changed = true;
+    fantasyChanged = true;
   }
   if (sel.gamedayId && sel.gamedayId !== state.currentGamedayId &&
-      state.events.some((e) => e.gameday_id === sel.gamedayId)) {
+      (sel.gamedayId === "overall" || state.events.some((e) => e.gameday_id === sel.gamedayId))) {
     state.currentGamedayId = sel.gamedayId;
     ui.eventSelect.value = String(sel.gamedayId);
-    changed = true;
+    fantasyChanged = true;
   }
   const newPage = sel.page || 1;
   if (newPage !== state.currentPage) {
     state.currentPage = newPage;
-    changed = true;
+    fantasyChanged = true;
   }
-  if (changed) loadLeague();
+  if (fantasyChanged && state.view === "fantasy") loadLeague();
+
+  // bracket params
+  const params = new URLSearchParams(window.location.search);
+  let bracketChanged = false;
+  const bDisc = params.get("bdisc");
+  if ((bDisc === "M" || bDisc === "F") && bDisc !== state.currentDiscipline) {
+    state.currentDiscipline = bDisc;
+    if (ui.bracketTourSelect) ui.bracketTourSelect.value = bDisc;
+    bracketChanged = true;
+  }
+  const bLeague = params.get("bleague");
+  if (bLeague && bLeague !== String(state.currentBracketLeagueId)) {
+    state.currentBracketLeagueId = bLeague;
+    if (ui.bracketLeagueSelect) ui.bracketLeagueSelect.value = bLeague;
+    bracketChanged = true;
+  }
+  const bEvent = params.get("bevent");
+  if (bEvent && bEvent !== state.currentBracketEventId) {
+    state.currentBracketEventId = bEvent;
+    if (ui.bracketEventSelect) ui.bracketEventSelect.value = bEvent;
+    bracketChanged = true;
+  }
+  const bPage = Number(params.get("bpage")) || 1;
+  if (bPage !== state.currentBracketPage) {
+    state.currentBracketPage = bPage;
+    bracketChanged = true;
+  }
+  if (bracketChanged && state.view === "brackets") loadBracketLeaderboard();
 });
 ui.refresh.addEventListener("click", () => loadLeague());
+
+// ===============================================================
+// ------- Brackets -------
+// ===============================================================
+
+const BRACKET_PAGE_SIZE = 10;
+
+function saveBracketSelection({ pushHistory = false } = {}) {
+  const lid = state.currentBracketLeagueId;
+  const eid = state.currentBracketEventId;
+  const disc = state.currentDiscipline;
+  const page = state.currentBracketPage;
+  if (lid != null) localStorage.setItem("bf.bracketLeagueId", String(lid));
+  if (eid != null) localStorage.setItem("bf.bracketEventId", String(eid));
+  if (disc) localStorage.setItem("bf.discipline", disc);
+  if (page) localStorage.setItem("bf.bracketPage", String(page));
+
+  const params = new URLSearchParams(window.location.search);
+  if (lid != null) params.set("bleague", String(lid)); else params.delete("bleague");
+  if (eid != null) params.set("bevent", String(eid)); else params.delete("bevent");
+  if (disc) params.set("bdisc", disc); else params.delete("bdisc");
+  if (page && page > 1) params.set("bpage", String(page)); else params.delete("bpage");
+  const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+  if (pushHistory) history.pushState(null, "", next);
+  else history.replaceState(null, "", next);
+}
+
+async function bracketGet(path, params = {}) {
+  const url = new URL(API + path);
+  url.searchParams.set("v", Date.now().toString());
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null) url.searchParams.set(k, String(v));
+  }
+  const r = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      "x-game-token": state.bracketToken || "",
+    },
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+  return r.json();
+}
+
+async function bracketStatic(path) {
+  const url = new URL(API + path);
+  url.searchParams.set("v", Date.now().toString());
+  const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+  if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+  return r.json();
+}
+
+function setBracketStatus(msg, isError) {
+  ui.bracketStatus.textContent = msg || "";
+  ui.bracketStatus.className = "status" + (isError ? " error" : "");
+}
+
+function populateBracketTourSelect() {
+  ui.bracketTourSelect.innerHTML = "";
+  for (const d of DISCIPLINES) {
+    const opt = document.createElement("option");
+    opt.value = d.key;
+    opt.textContent = d.label;
+    ui.bracketTourSelect.appendChild(opt);
+  }
+  ui.bracketTourSelect.value = state.currentDiscipline;
+}
+
+function disciplineForEventId(eventId) {
+  if (eventId === "overall") return state.currentDiscipline;
+  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  for (const ev of events) {
+    if (ev.id === eventId) return "M";
+    if (ev.jointEventId === eventId) return "F";
+  }
+  return state.currentDiscipline;
+}
+
+// The leaderboard API attributes combined (men's + women's) points to the men's
+// eventId only; querying with the women's jointEventId returns no points. So we
+// always normalise to the men's eventId before hitting that endpoint.
+function canonicalLeaderboardEventId(eventId) {
+  if (eventId === "overall") return "overall";
+  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  for (const ev of events) {
+    if (ev.id === eventId || ev.jointEventId === eventId) return ev.id;
+  }
+  return eventId;
+}
+
+function populateBracketLeagueSelect() {
+  ui.bracketLeagueSelect.innerHTML = "";
+  const leagues = state.bracketLeaguesByTournament.get(state.currentTournamentId) || [];
+  for (const l of leagues) {
+    const opt = document.createElement("option");
+    opt.value = l.leagueId;
+    opt.textContent = `${l.name} · ${l.memberCount.toLocaleString()} members`;
+    ui.bracketLeagueSelect.appendChild(opt);
+  }
+  if (leagues.some((l) => String(l.leagueId) === String(state.currentBracketLeagueId))) {
+    ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
+  } else if (leagues.length) {
+    state.currentBracketLeagueId = String(leagues[0].leagueId);
+    ui.bracketLeagueSelect.value = state.currentBracketLeagueId;
+  }
+}
+
+function populateBracketEventSelect() {
+  ui.bracketEventSelect.innerHTML = "";
+  const overall = document.createElement("option");
+  overall.value = "overall";
+  overall.textContent = "Season — overall";
+  ui.bracketEventSelect.appendChild(overall);
+  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  const disc = state.currentDiscipline;
+  for (const ev of events) {
+    const opt = document.createElement("option");
+    opt.value = disc === "F" ? ev.jointEventId : ev.id;
+    const start = ev.startAt ? new Date(ev.startAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+    const statusKey = disc === "F" ? (ev.jointEventStatus || ev.status) : ev.status;
+    let status = "";
+    if (statusKey === "completed") status = " · completed";
+    else if (statusKey === "locked") status = " · locked";
+    else if (statusKey === "live") status = " · live";
+    else if (statusKey === "upcoming") status = " · upcoming";
+    opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
+    ui.bracketEventSelect.appendChild(opt);
+  }
+  ui.bracketEventSelect.value = state.currentBracketEventId || "overall";
+}
+
+async function ensureBracketTournament(tournamentId) {
+  if (state.bracketEventsByTournament.has(tournamentId)) return;
+  const data = await bracketStatic(`/static-assets/brackets/feeds/tournaments/${tournamentId}.json`);
+  state.bracketEventsByTournament.set(tournamentId, data?.events ?? []);
+}
+
+async function ensureBracketLeagues(tournamentId) {
+  if (state.bracketLeaguesByTournament.has(tournamentId)) return;
+  const data = await bracketGet(`/bracket/services/v1/leagues/tournament/${tournamentId}`);
+  const r = data?.response ?? {};
+  const buckets = [
+    ...(r.publicLeagues ?? []),
+    ...(r.countryLeagues ?? []),
+    ...(r.privateLeagues ?? []),
+    ...(r.sponsorLeagues ?? []),
+  ];
+  const joined = buckets.filter((l) => l.isJoined);
+  state.bracketLeaguesByTournament.set(tournamentId, joined);
+}
+
+async function bootstrapBrackets() {
+  if (!state.bracketToken) {
+    setBracketStatus(
+      "No bracket token saved. Visit the Brackets section of fantasy.worldsurfleague.com once (so its userToken gets cached), then re-run the bookmarklet — or open Settings and paste the userToken value manually.",
+      true,
+    );
+    return;
+  }
+  setBracketStatus("Loading bracket data…");
+  try {
+    await Promise.all([
+      ensureBracketTournament(state.currentTournamentId),
+      ensureBracketLeagues(state.currentTournamentId),
+    ]);
+    // Now that events are loaded, infer discipline from any preserved event UUID.
+    if (state.currentBracketEventId !== "overall") {
+      state.currentDiscipline = disciplineForEventId(state.currentBracketEventId);
+    }
+    populateBracketTourSelect();
+    populateBracketLeagueSelect();
+    populateBracketEventSelect();
+    // make sure the dropdown values reflect the restored state (defaults can override)
+    ui.bracketTourSelect.value = state.currentDiscipline;
+    if (state.currentBracketLeagueId) ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
+    if (state.currentBracketEventId) ui.bracketEventSelect.value = String(state.currentBracketEventId);
+    ui.bracketControls.hidden = false;
+    saveBracketSelection();
+    await loadBracketLeaderboard();
+  } catch (err) {
+    setBracketStatus(`Failed to load brackets: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+async function loadBracketLeaderboard() {
+  if (!state.currentBracketLeagueId) return;
+  const eventKey = state.currentBracketEventId || "overall";
+  const isOverall = eventKey === "overall";
+  const table = document.getElementById("bracket-ranking");
+  table.classList.toggle("bracket-overall", isOverall);
+  ui.bracketPanel.hidden = true;
+  ui.bracketBody.innerHTML = "";
+  setBracketStatus("Loading leaderboard…");
+  try {
+    const lbKey = canonicalLeaderboardEventId(eventKey);
+    const [data, selfData] = await Promise.all([
+      bracketGet(
+        `/bracket/services/v1/leaderboard/${encodeURIComponent(state.currentBracketLeagueId)}/${encodeURIComponent(lbKey)}`,
+        { tourId: state.currentTournamentId, type: lbKey }
+      ),
+      bracketGet(
+        `/bracket/services/v1/leaderboard/self/${encodeURIComponent(state.currentBracketLeagueId)}/${encodeURIComponent(lbKey)}`,
+        { tourId: state.currentTournamentId, type: lbKey }
+      ).catch(() => null),
+    ]);
+    const r = data?.response ?? {};
+    const all = r.entries ?? [];
+    const total = r.totalCount ?? all.length;
+    const start = (state.currentBracketPage - 1) * BRACKET_PAGE_SIZE;
+    const slice = all.slice(start, start + BRACKET_PAGE_SIZE);
+    state.bracketHasNextPage = start + BRACKET_PAGE_SIZE < Math.min(total, all.length);
+    const selfRow = selfData?.response;
+    renderBracketLeaderboard(slice, eventKey, selfRow);
+    updateBracketPagination();
+    ui.bracketPanel.hidden = false;
+    setBracketStatus("");
+    if (!isOverall && slice.length) {
+      // Include the pinned self row in picks enrichment so its picks render too.
+      const enrich = [...slice];
+      if (selfRow && selfRow.userId && !slice.some((r) => r.userId === selfRow.userId)) {
+        enrich.unshift(selfRow);
+      }
+      enrichBracketRowsWithPicks(enrich, eventKey);
+    }
+  } catch (err) {
+    setBracketStatus(`Failed to load leaderboard: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+function renderBracketLeaderboard(rows, eventKey, selfRow) {
+  ui.bracketBody.innerHTML = "";
+  if (!rows.length && !selfRow) {
+    const colspan = eventKey === "overall" ? "3" : "4";
+    ui.bracketBody.innerHTML = `<tr><td colspan="${colspan}" class="empty">No entries on this page.</td></tr>`;
+    return;
+  }
+  // Always pin the "you" row at the top of the page, and skip the duplicate
+  // copy from the regular slice if the user is naturally on this page.
+  if (selfRow && selfRow.userId && Number.isFinite(selfRow.rank)) {
+    const tr = makeBracketRow(selfRow, eventKey);
+    tr.classList.add("is-you", "self-pinned");
+    ui.bracketBody.appendChild(tr);
+  }
+  for (const row of rows) {
+    if (selfRow && selfRow.userId && row.userId === selfRow.userId) continue;
+    const tr = makeBracketRow(row, eventKey);
+    ui.bracketBody.appendChild(tr);
+  }
+}
+
+function makeBracketRow(row, eventKey) {
+  const tr = document.createElement("tr");
+  tr.dataset.userId = row.userId;
+  tr.dataset.eventKey = eventKey;
+  tr.innerHTML = `
+    <td class="rank">${row.rank ?? "—"}</td>
+    <td><div class="player-name">${escape(row.userName || "—")}</div></td>
+    <td class="bp-cell"><span class="muted" style="font-size:11px">…</span></td>
+    <td class="pts">${formatPts(row.points)}</td>
+  `;
+  if (eventKey !== "overall") tr.style.cursor = "pointer";
+  return tr;
+}
+
+async function enrichBracketRowsWithPicks(rows, eventId) {
+  let eventFeed;
+  try {
+    eventFeed = await ensureBracketEventFeed(eventId);
+  } catch {
+    return;
+  }
+  // Pre-index participants and matches.
+  const participants = new Map();
+  const matchIndex = new Map();
+  const lateStages = new Set(); // matchIds in QF/SF/F
+  for (const stage of eventFeed.stages || []) {
+    const isLate = /quarter|semi|final/i.test(stage.stageName || "");
+    for (const m of stage.matches || []) {
+      matchIndex.set(m.matchId, { stage, match: m });
+      if (isLate) lateStages.add(m.matchId);
+      for (const p of m.participants || []) participants.set(p.id, p);
+    }
+  }
+
+  await mapWithConcurrency(rows, 5, async (row) => {
+    try {
+      const res = await bracketGet(
+        `/bracket/services/v1/predictions/others/${state.currentTournamentId}/${eventId}/${row.userId}`
+      );
+      const matches = res?.matches ?? res?.response?.matches ?? [];
+      renderBracketRowPicks(row.userId, matches, { participants, matchIndex, lateStages });
+    } catch (err) {
+      const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(row.userId)}"]`);
+      if (tr) {
+        const cell = tr.querySelector(".bp-cell");
+        if (cell) cell.innerHTML = `<span class="muted" style="font-size:11px">load failed</span>`;
+      }
+    }
+  });
+}
+
+function cssEscape(s) {
+  // CSS.escape isn't always available; UUIDs are safe with [a-f0-9-] so the simple form works.
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+function renderBracketRowPicks(userId, picks, ctx) {
+  const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(userId)}"]`);
+  if (!tr) return;
+  const cell = tr.querySelector(".bp-cell");
+  if (!cell) return;
+
+  const { participants, matchIndex, lateStages } = ctx;
+
+  // Stage tally
+  const tally = {}; // stageName -> {right, scored, total}
+  for (const pick of picks) {
+    const ref = matchIndex.get(pick.matchId);
+    if (!ref) continue;
+    const sn = ref.stage.stageName || "—";
+    const t = (tally[sn] ||= { right: 0, scored: 0, total: 0, order: ref.stage.orderNo || 0 });
+    t.total++;
+    if (ref.match.winnerId) {
+      t.scored++;
+      if (pick.selectedPlayerId === ref.match.winnerId) t.right++;
+    }
+  }
+  const tallyEntries = Object.entries(tally).sort((a, b) => a[1].order - b[1].order);
+
+  // Late-stage avatars (QF + SF + F), explicitly sorted so QF → SF → F regardless of API order
+  const latePicks = picks
+    .filter((p) => lateStages.has(p.matchId))
+    .map((p) => ({ pick: p, ref: matchIndex.get(p.matchId) }))
+    .filter((x) => x.ref)
+    .sort((a, b) => {
+      const so = (a.ref.stage.orderNo || 0) - (b.ref.stage.orderNo || 0);
+      if (so !== 0) return so;
+      return (a.ref.match.matchNumber || 0) - (b.ref.match.matchNumber || 0);
+    });
+  const lateRow = document.createElement("div");
+  lateRow.className = "bp-row";
+  let renderedAvatars = 0;
+  for (const { pick, ref } of latePicks) {
+    const surfer = participants.get(pick.selectedPlayerId);
+    const winnerSet = !!ref?.match?.winnerId;
+    const isCorrect = winnerSet && pick.selectedPlayerId === ref.match.winnerId;
+    const isWrong = winnerSet && !isCorrect;
+    const cls = isCorrect ? "correct" : isWrong ? "wrong" : "pending";
+    const photo = surfer?.metadata?.headshotImageUrl || "";
+    const stageTag = (pick.matchLabel || "").replace(/\s*HEAT\s*\d+/i, "").trim() || "";
+    const name = surfer?.name || "?";
+    const tooltip = `${pick.matchLabel || ""}: ${name}${winnerSet ? (isCorrect ? " ✓" : " ✗") : " (pending)"}`;
+    const div = document.createElement("span");
+    div.className = `bp-pick ${cls}`;
+    div.title = tooltip;
+    div.innerHTML = `${photo ? `<img src="${escape(photo)}" alt="" loading="lazy">` : ""}${stageTag ? `<span class="stage-tag">${escape(stageTag)}</span>` : ""}`;
+    lateRow.appendChild(div);
+    renderedAvatars++;
+  }
+
+  cell.innerHTML = "";
+  if (renderedAvatars) cell.appendChild(lateRow);
+
+  if (tallyEntries.length) {
+    const sum = document.createElement("div");
+    sum.className = "bp-summary";
+    sum.innerHTML = tallyEntries
+      .map(([name, t]) => {
+        const correct = t.scored ? `<strong>${t.right}/${t.scored}</strong>` : `<strong>0/${t.total}</strong> pending`;
+        return `${escape(name.replace("Round ", "R").replace("Quarterfinals", "QF").replace("Semifinals", "SF").replace("Final", "F"))}: ${correct}`;
+      })
+      .join(" · ");
+    cell.appendChild(sum);
+  }
+
+  if (!renderedAvatars && !tallyEntries.length) {
+    cell.innerHTML = `<span class="muted" style="font-size:11px">no picks</span>`;
+  }
+}
+
+function updateBracketPagination() {
+  const show = state.currentBracketPage > 1 || state.bracketHasNextPage;
+  ui.bracketPagination.hidden = !show;
+  ui.bracketPageNum.textContent = String(state.currentBracketPage);
+  ui.bracketPrev.disabled = state.currentBracketPage <= 1;
+  ui.bracketNext.disabled = !state.bracketHasNextPage;
+}
+
+async function ensureBracketEventFeed(eventId) {
+  if (state.bracketEventFeeds.has(eventId)) return state.bracketEventFeeds.get(eventId);
+  const feed = await bracketStatic(`/static-assets/brackets/feeds/events/${eventId}.json`);
+  state.bracketEventFeeds.set(eventId, feed);
+  return feed;
+}
+
+async function showBracketDetail(userId, userName, eventId) {
+  const tournamentId = state.currentTournamentId;
+  setBracketStatus("Loading picks…");
+  try {
+    const [picksRes, eventFeed] = await Promise.all([
+      bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${eventId}/${userId}`),
+      ensureBracketEventFeed(eventId),
+    ]);
+    setBracketStatus("");
+    renderBracketDetail({ userName, eventFeed, picks: picksRes?.matches ?? picksRes?.response?.matches ?? [] });
+    ui.bracketDetail.showModal();
+  } catch (err) {
+    setBracketStatus(`Failed to load picks: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+function renderBracketDetail({ userName, eventFeed, picks }) {
+  const body = ui.bracketDetailBody;
+  body.innerHTML = "";
+
+  // Index picks by matchId
+  const pickById = new Map();
+  for (const p of picks) pickById.set(p.matchId, p.selectedPlayerId);
+
+  // Index participants for fast lookup
+  const allParticipants = new Map();
+  for (const stage of eventFeed.stages || []) {
+    for (const m of stage.matches || []) {
+      for (const p of m.participants || []) allParticipants.set(p.id, p);
+    }
+  }
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "bd-header";
+  header.innerHTML = `
+    <div class="bd-name">${escape(userName)}</div>
+    <div class="bd-meta">
+      <span><strong>${escape(eventFeed.eventName || "")}</strong></span>
+      <span>${escape((eventFeed.status || "").replace(/_/g, " "))}</span>
+    </div>
+  `;
+  body.appendChild(header);
+
+  // Stages
+  for (const stage of eventFeed.stages || []) {
+    const matches = stage.matches || [];
+    let correct = 0, scored = 0, total = 0;
+    for (const m of matches) {
+      total++;
+      if (m.winnerId) {
+        scored++;
+        if (pickById.get(m.matchId) === m.winnerId) correct++;
+      }
+    }
+    const sec = document.createElement("div");
+    sec.className = "bd-stage";
+
+    const h = document.createElement("h3");
+    h.innerHTML = `${escape(stage.stageName || "")}<span class="stage-summary">${scored ? `${correct}/${scored} correct` : `${total} heat${total === 1 ? "" : "s"}`}</span>`;
+    sec.appendChild(h);
+
+    // Optional column labels (first stage only)
+    if (stage.orderNo === 1) {
+      const labels = document.createElement("div");
+      labels.className = "bd-heat";
+      labels.style.borderTop = "none";
+      labels.innerHTML = `
+        <span class="bd-side-label">Heat</span>
+        <span class="bd-side-label">Picked</span>
+        <span class="bd-side-label" style="text-align:center"></span>
+        <span class="bd-side-label">Winner</span>
+      `;
+      sec.appendChild(labels);
+    }
+
+    for (const m of matches) {
+      const pickedId = pickById.get(m.matchId);
+      const picked = pickedId ? allParticipants.get(pickedId) : null;
+      const winner = m.winnerId ? allParticipants.get(m.winnerId) : null;
+
+      const isCorrect = m.winnerId && pickedId === m.winnerId;
+      const isWrong = m.winnerId && pickedId && pickedId !== m.winnerId;
+
+      const row = document.createElement("div");
+      row.className = "bd-heat";
+      row.innerHTML = `
+        <span class="bd-heat-label">${escape(m.matchLabel || `Heat ${m.matchNumber || ""}`)}</span>
+        ${renderBdPick(picked, isCorrect ? "correct" : isWrong ? "wrong" : "")}
+        ${renderBdResult(m, isCorrect, isWrong)}
+        ${renderBdPick(winner, "")}
+      `;
+      sec.appendChild(row);
+    }
+    body.appendChild(sec);
+  }
+}
+
+function renderBdPick(participant, status) {
+  if (!participant) {
+    return `<span class="bd-pick empty">—</span>`;
+  }
+  const photo = participant.metadata?.headshotImageUrl || "";
+  const seed = participant.seed != null ? `<span class="seed">#${participant.seed}</span>` : "";
+  return `<span class="bd-pick ${status}">
+    ${photo ? `<img src="${escape(photo)}" alt="" loading="lazy">` : `<span class="avatar" style="width:28px;height:28px;border-radius:50%;background:var(--avatar-bg)"></span>`}
+    <span class="name">${escape(participant.name || "")}${seed}</span>
+  </span>`;
+}
+
+function renderBdResult(match, isCorrect, isWrong) {
+  if (isCorrect) return `<span class="bd-result correct">✓</span>`;
+  if (isWrong) return `<span class="bd-result wrong">✗</span>`;
+  if (match.status === "completed") return `<span class="bd-result pending">—</span>`;
+  return `<span class="bd-result pending">…</span>`;
+}
+
+// ===============================================================
+// view switching
+// ===============================================================
+function setView(view) {
+  state.view = view === "brackets" ? "brackets" : "fantasy";
+  ui.viewFantasy.hidden = state.view !== "fantasy";
+  ui.viewBrackets.hidden = state.view !== "brackets";
+  for (const t of ui.tabs) {
+    t.setAttribute("aria-selected", t.dataset.view === state.view ? "true" : "false");
+  }
+  // Update URL
+  const params = new URLSearchParams(window.location.search);
+  if (state.view === "brackets") params.set("view", "brackets");
+  else params.delete("view");
+  history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  if (state.view === "brackets" && !state.bracketEventsByTournament.has(state.currentTournamentId)) {
+    bootstrapBrackets();
+  }
+}
+
+for (const t of ui.tabs) {
+  t.addEventListener("click", () => setView(t.dataset.view));
+}
+
+ui.bracketTourSelect.addEventListener("change", () => {
+  const newDisc = ui.bracketTourSelect.value === "F" ? "F" : "M";
+  if (state.currentBracketEventId !== "overall") {
+    const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+    const ev = events.find((e) => e.id === state.currentBracketEventId || e.jointEventId === state.currentBracketEventId);
+    if (ev) {
+      state.currentBracketEventId = newDisc === "F" ? ev.jointEventId : ev.id;
+    }
+  }
+  state.currentDiscipline = newDisc;
+  state.currentBracketPage = 1;
+  populateBracketEventSelect();
+  saveBracketSelection({ pushHistory: true });
+  loadBracketLeaderboard();
+});
+ui.bracketLeagueSelect.addEventListener("change", () => {
+  state.currentBracketLeagueId = ui.bracketLeagueSelect.value;
+  state.currentBracketPage = 1;
+  saveBracketSelection({ pushHistory: true });
+  loadBracketLeaderboard();
+});
+ui.bracketEventSelect.addEventListener("change", () => {
+  state.currentBracketEventId = ui.bracketEventSelect.value;
+  state.currentBracketPage = 1;
+  saveBracketSelection({ pushHistory: true });
+  loadBracketLeaderboard();
+});
+ui.bracketRefresh.addEventListener("click", () => loadBracketLeaderboard());
+ui.bracketPrev.addEventListener("click", () => {
+  if (state.currentBracketPage <= 1) return;
+  state.currentBracketPage -= 1;
+  saveBracketSelection({ pushHistory: true });
+  loadBracketLeaderboard();
+});
+ui.bracketNext.addEventListener("click", () => {
+  if (!state.bracketHasNextPage) return;
+  state.currentBracketPage += 1;
+  saveBracketSelection({ pushHistory: true });
+  loadBracketLeaderboard();
+});
+ui.bracketBody.addEventListener("click", (e) => {
+  const tr = e.target.closest("tr[data-user-id]");
+  if (!tr) return;
+  const eventKey = tr.dataset.eventKey;
+  if (!eventKey || eventKey === "overall") return;
+  showBracketDetail(tr.dataset.userId, tr.querySelector(".player-name")?.textContent || "", eventKey);
+});
+ui.bracketDetail.addEventListener("click", (e) => {
+  if (e.target === ui.bracketDetail || (e.target.closest && e.target.closest("[data-close]"))) {
+    ui.bracketDetail.close();
+  }
+});
 
 // ------- service worker -------
 if ("serviceWorker" in navigator) {
@@ -1441,6 +2415,13 @@ if ("serviceWorker" in navigator) {
 
 // ------- init -------
 loadConfig();
+
+// initial view from URL — needs config loaded first so bracketToken is in state
+{
+  const params = new URLSearchParams(window.location.search);
+  setView(params.get("view") === "brackets" ? "brackets" : "fantasy");
+}
+
 if (state.token && state.userGuid) {
   updateUserLine();
   bootstrap();
