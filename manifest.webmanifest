@@ -1,0 +1,16 @@
+{
+  "name": "Better Fantasy",
+  "short_name": "Fantasy",
+  "description": "League view for the WSL Fantasy game — see who picked which surfers and how they're scoring.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14141a",
+  "theme_color": "#0b66c2",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-1024-maskable.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

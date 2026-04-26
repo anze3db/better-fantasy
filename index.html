@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Better Fantasy — League View</title>
+<link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#14141a" media="(prefers-color-scheme: dark)" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<link rel="apple-touch-icon" href="/icons/icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Fantasy" />
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("bf.theme");
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f7f7f5;
+    --panel: #ffffff;
+    --soft: #fafaf7;
+    --border: #e3e3df;
+    --text: #1c1c1a;
+    --muted: #6b6b66;
+    --accent: #0b66c2;
+    --accent-soft: #e8f0fa;
+    --input-bg: #ffffff;
+    --avatar-bg: #efefea;
+    --dot-bg: #ffffff;
+    --gender-m: #1f6cd9;
+    --gender-f: #c4359e;
+    --tier-a: #1e7a3e;
+    --tier-b: #b07d00;
+    --tier-c: #6b4fbb;
+    --warn: #b3261e;
+    --power: #f0c000;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14141a;
+    --panel: #1d1d24;
+    --soft: #25252e;
+    --border: #2e2e36;
+    --text: #ececee;
+    --muted: #8b8b95;
+    --accent: #5fa8e5;
+    --accent-soft: #1c2c3f;
+    --input-bg: #25252e;
+    --avatar-bg: #2e2e36;
+    --dot-bg: #1d1d24;
+    --gender-m: #6aa8ff;
+    --gender-f: #e066c2;
+    --tier-a: #4eb877;
+    --tier-b: #d4a73a;
+    --tier-c: #a08fe0;
+    --warn: #f06a63;
+    --power: #f7c93a;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.5);
+  }
+  * { box-sizing: border-box; }
+  html { overflow-x: clip; overflow-x: hidden; }
+  body {
+    margin: 0; padding: 0;
+    overflow-x: clip; overflow-x: hidden;
+    position: relative; max-width: 100%;
+  }
+  /* lock body scroll when any dialog is open */
+  body:has(dialog[open]) { overflow: hidden; }
+  /* respect iPhone safe areas in standalone (installed) mode */
+  header { padding: max(14px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 14px max(22px, env(safe-area-inset-left)); }
+  main {
+    padding-left: max(22px, env(safe-area-inset-left));
+    padding-right: max(22px, env(safe-area-inset-right));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: var(--panel); border-bottom: 1px solid var(--border);
+  }
+  header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
+  header .right { display: flex; gap: 8px; align-items: center; }
+  button {
+    background: var(--panel); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer;
+  }
+  button:hover { background: var(--soft); }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { background: color-mix(in srgb, var(--accent) 80%, black); }
+  button.danger { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
+  button.danger:hover { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); }
+  button.icon-btn {
+    padding: 6px; width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  button.icon-btn svg { width: 16px; height: 16px; display: block; }
+  #theme-toggle .icon-sun { display: none; }
+  #theme-toggle .icon-moon { display: block; }
+  [data-theme="dark"] #theme-toggle .icon-sun { display: block; }
+  [data-theme="dark"] #theme-toggle .icon-moon { display: none; }
+  main { max-width: 1400px; margin: 22px auto; padding: 0 22px; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+  .controls {
+    display: flex; gap: 14px; padding: 14px; align-items: end; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field select, .field input, .field textarea {
+    background: var(--input-bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; font: inherit; min-width: 240px;
+  }
+  .field select { min-width: 280px; }
+  .badge {
+    display: inline-block; padding: 1px 7px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; line-height: 18px;
+    background: var(--soft); color: var(--muted);
+  }
+  .badge.A { background: color-mix(in srgb, var(--tier-a) 18%, transparent); color: var(--tier-a); }
+  .badge.B { background: color-mix(in srgb, var(--tier-b) 18%, transparent); color: var(--tier-b); }
+  .badge.C { background: color-mix(in srgb, var(--tier-c) 18%, transparent); color: var(--tier-c); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; font-size: 12px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .03em;
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    background: var(--soft);
+  }
+  tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--soft); }
+  .rank { font-variant-numeric: tabular-nums; font-weight: 600; width: 50px; }
+  .pts { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .pts-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .pts-cell .rank-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .player-name { font-weight: 600; }
+  .player-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .tier-cell { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+  .surfer {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    width: 54px; font-size: 10px; line-height: 1.1; color: var(--muted);
+    cursor: pointer; user-select: none;
+  }
+  .surfer:focus-visible .avatar { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .surfer .avatar-wrap {
+    position: relative; width: 42px; height: 42px;
+  }
+  .surfer .avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--text);
+    background: var(--avatar-bg); overflow: hidden;
+    border: 2px solid var(--panel);
+    box-shadow: 0 0 0 2px var(--tier-color, var(--border));
+    user-select: none;
+  }
+  .surfer.tier-A { --tier-color: var(--tier-a); }
+  .surfer.tier-B { --tier-color: var(--tier-b); }
+  .surfer.tier-C { --tier-color: var(--tier-c); }
+  .surfer .avatar img.avatar-img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .surfer.power .avatar {
+    box-shadow: 0 0 0 2px var(--tier-color, var(--border)), 0 0 0 4px var(--power);
+  }
+  .surfer .power-badge {
+    position: absolute; top: -5px; right: -5px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--power); color: var(--panel); font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--panel); line-height: 1; z-index: 2;
+  }
+  .surfer.eliminated .avatar { filter: grayscale(1); opacity: .55; }
+  .surfer .elim-cross {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(45deg, transparent 46%, var(--warn) 46%, var(--warn) 54%, transparent 54%);
+    border-radius: 50%; opacity: .8;
+  }
+  .surfer.eliminated .pts { color: var(--muted); text-decoration: line-through; }
+  .surfer .pts {
+    font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
+    font-size: 11px;
+  }
+  .surfer .country img.flag-img {
+    width: 16px; height: 11px; object-fit: cover;
+    border-radius: 1px; display: inline-block; vertical-align: middle;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .surfer .gender-dot {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--dot-bg); border: 1.5px solid var(--border);
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); z-index: 2;
+  }
+  .surfer .gender-dot.M { color: var(--gender-m); }
+  .surfer .gender-dot.F { color: var(--gender-f); }
+  .tier-summary {
+    display: block; font-size: 10px; color: var(--muted); font-weight: 500;
+    margin-bottom: 2px; letter-spacing: .03em; text-transform: none;
+  }
+  .empty { text-align: center; color: var(--muted); padding: 36px; line-height: 1.6; }
+  .empty strong { color: var(--text); }
+  .pagination {
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+    padding: 12px 16px; border-top: 1px solid var(--border);
+  }
+  .pagination .page-info { font-size: 12px; color: var(--muted); margin-right: auto; }
+  .pagination button[disabled] { opacity: .4; cursor: not-allowed; }
+  .status { padding: 10px 14px; font-size: 13px; color: var(--muted); }
+  .status.error { color: var(--warn); }
+
+  dialog {
+    border: none; border-radius: 12px; padding: 0;
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    background: var(--panel); color: var(--text);
+    max-width: 560px; width: 92%;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+
+  /* surfer detail dialog */
+  #surfer-detail { max-width: 480px; }
+  .sd-close {
+    position: absolute; top: 10px; right: 10px;
+    background: transparent; border: none; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 50%;
+    color: var(--muted); font-size: 18px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .sd-close:hover { background: var(--soft); color: var(--text); }
+  .sd-header {
+    display: flex; gap: 16px; padding: 22px 24px;
+    align-items: center; border-bottom: 1px solid var(--border);
+  }
+  .sd-photo {
+    position: relative; width: 76px; height: 76px; border-radius: 50%;
+    overflow: hidden; flex-shrink: 0; background: var(--avatar-bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 700; color: var(--text);
+    border: 3px solid var(--panel);
+    box-shadow: 0 0 0 3px var(--tier-color, var(--border));
+  }
+  .sd-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .sd-photo.power { box-shadow: 0 0 0 3px var(--tier-color, var(--border)), 0 0 0 6px var(--power); }
+  .sd-photo.eliminated { filter: grayscale(1); opacity: .6; }
+  .sd-info { min-width: 0; flex: 1; }
+  .sd-name { font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .sd-meta {
+    font-size: 13px; color: var(--muted); margin-top: 4px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .sd-meta .flag-img {
+    width: 18px; height: 13px; object-fit: cover;
+    border-radius: 2px; box-shadow: 0 0 0 1px var(--border);
+  }
+  .sd-pills { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .sd-pill {
+    font-size: 10px; padding: 2px 8px; border-radius: 999px;
+    font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  }
+  .sd-pill.power { background: color-mix(in srgb, var(--power) 22%, transparent); color: var(--power); }
+  .sd-pill.active { background: color-mix(in srgb, var(--tier-a) 22%, transparent); color: var(--tier-a); }
+  .sd-pill.out { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+  .sd-pill.tier-A { background: color-mix(in srgb, var(--tier-a) 18%, transparent); color: var(--tier-a); }
+  .sd-pill.tier-B { background: color-mix(in srgb, var(--tier-b) 18%, transparent); color: var(--tier-b); }
+  .sd-pill.tier-C { background: color-mix(in srgb, var(--tier-c) 18%, transparent); color: var(--tier-c); }
+  .sd-section { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+  .sd-section:last-child { border-bottom: none; }
+  .sd-section h3 {
+    margin: 0 0 10px; font-size: 11px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .05em;
+  }
+  .sd-pts-large {
+    font-size: 32px; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .sd-pts-large.eliminated { color: var(--muted); text-decoration: line-through; }
+  .sd-rounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+  .sd-round { background: var(--soft); border-radius: 6px; padding: 8px 6px; text-align: center; }
+  .sd-round-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .sd-round-value { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .sd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+  .sd-stat-label { font-size: 11px; color: var(--muted); }
+  .sd-stat-value { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sd-empty { color: var(--muted); font-size: 13px; }
+  .dialog-body { padding: 22px 24px; }
+  .dialog-body h2 { margin: 0 0 4px; font-size: 16px; }
+  .dialog-body p { color: var(--muted); margin: 0 0 18px; }
+  .dialog-body .field { margin-bottom: 14px; }
+  .dialog-body textarea { min-height: 80px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  .quick-connect { margin-bottom: 14px; }
+  .qc-row {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin-bottom: 8px;
+  }
+  .qc-row[hidden] { display: none; }
+  .qc-row .meta-line { margin-top: 0; flex: 1; min-width: 0; }
+  .dialog-body p.meta-line { margin-top: 20px; margin-bottom: 0; line-height: 1.5; }
+  .qc-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--accent); color: white; text-decoration: none;
+    padding: 8px 14px; border-radius: 8px; font-weight: 600;
+    font-size: 13px; border: 1px solid var(--accent); cursor: grab;
+    white-space: nowrap;
+  }
+  .qc-btn:active { cursor: grabbing; }
+  .qc-btn-secondary {
+    background: transparent; color: var(--accent); cursor: pointer;
+  }
+  .qc-btn-secondary:hover { background: var(--accent-soft); }
+  .meta-line { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* mobile: turn each row into a card */
+  @media (max-width: 760px) {
+    main {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+      padding-bottom: env(safe-area-inset-bottom);
+      margin: 14px auto;
+    }
+    header { padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left)); }
+    header h1 { font-size: 15px; }
+    .controls { padding: 10px; gap: 8px; }
+    .field select, .field input { min-width: 0; width: 100%; }
+    .field { flex: 1 1 140px; }
+
+    table, thead, tbody, tr, td { display: block; }
+    thead { display: none; }
+    tbody tr {
+      padding: 14px 14px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "rank info pts"
+        "tier-a tier-a tier-a"
+        "tier-b tier-b tier-b"
+        "tier-c tier-c tier-c";
+      gap: 6px 12px;
+      align-items: start;
+      min-width: 0;
+    }
+    tbody td { padding: 0; border: none; min-width: 0; }
+    tbody td:nth-child(1) { grid-area: rank; font-size: 18px; align-self: center; }
+    tbody td:nth-child(2) {
+      grid-area: info; min-width: 0; align-self: center; overflow: hidden;
+    }
+    tbody td:nth-child(2) .player-name,
+    tbody td:nth-child(2) .player-meta {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    tbody td:nth-child(3) { grid-area: pts; align-self: center; text-align: right; }
+    tbody td:nth-child(3) .pts-cell { align-items: flex-end; }
+    tbody td:nth-child(4) { display: none; }
+    tbody td:nth-child(5) { grid-area: tier-a; min-width: 0; }
+    tbody td:nth-child(6) { grid-area: tier-b; min-width: 0; }
+    tbody td:nth-child(7) { grid-area: tier-c; min-width: 0; }
+    tbody td.tier-col::before {
+      content: attr(data-tier-label);
+      display: block;
+      font-size: 10px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .05em;
+      margin-bottom: 6px;
+    }
+    .player-name { font-size: 14px; }
+    .surfer { width: 48px; }
+    .surfer .avatar-wrap, .surfer .avatar { width: 36px; height: 36px; }
+    .pts-cell .rank-sub { font-size: 10px; }
+
+    /* dialog adjustments */
+    #surfer-detail { max-width: 100%; width: calc(100% - 24px); }
+    .sd-header { padding: 18px 18px; gap: 12px; }
+    .sd-photo { width: 60px; height: 60px; font-size: 20px; }
+    .sd-section { padding: 14px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Better Fantasy</h1>
+  <div class="right">
+    <span id="user-line" class="meta-line"></span>
+    <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.4 1.4 M17.6 17.6l1.4 1.4 M5 19l1.4-1.4 M17.6 6.4l1.4-1.4"/>
+      </svg>
+    </button>
+    <button id="open-settings">Settings</button>
+  </div>
+</header>
+
+<main>
+  <div class="panel controls" id="controls" hidden>
+    <div class="field">
+      <label for="league-select">League</label>
+      <select id="league-select"></select>
+    </div>
+    <div class="field">
+      <label for="event-select">Event</label>
+      <select id="event-select"></select>
+    </div>
+    <button id="refresh">Refresh</button>
+  </div>
+
+  <div id="status" class="status"></div>
+
+  <div class="panel" id="ranking-panel" hidden>
+    <table id="ranking">
+      <thead>
+        <tr>
+          <th class="rank">#</th>
+          <th>Team</th>
+          <th class="pts">Event pts</th>
+          <th class="pts">Season pts</th>
+          <th>Tier A</th>
+          <th>Tier B</th>
+          <th>Tier C</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="pagination" id="pagination" hidden>
+      <span class="page-info">Page <span id="page-num">1</span></span>
+      <button id="prev-page">Prev</button>
+      <button id="next-page">Next</button>
+    </div>
+  </div>
+</main>
+
+<dialog id="surfer-detail">
+  <button class="sd-close" data-close aria-label="Close">×</button>
+  <div class="sd-body"></div>
+</dialog>
+
+<dialog id="settings">
+  <div class="dialog-body">
+    <h2>Connect to WSL Fantasy</h2>
+    <p>Paste your <code>x-game-token</code> and user GUID. They're sent only to <code>gamesapi.worldsurfleague.com</code> from your browser.</p>
+
+    <div class="quick-connect">
+      <div class="qc-row">
+        <a id="bookmarklet" class="qc-btn" draggable="true">Connect WSL Fantasy</a>
+        <span class="meta-line">Drag to bookmarks bar → click while on <a href="https://fantasy.worldsurfleague.com" target="_blank" rel="noreferrer">fantasy.worldsurfleague.com</a></span>
+      </div>
+      <div class="qc-row" id="share-row" hidden>
+        <button type="button" id="share-link" class="qc-btn qc-btn-secondary">Copy share link</button>
+        <span class="meta-line">Send to another device to connect it instantly</span>
+      </div>
+    </div>
+
+    <form id="settings-form">
+      <div class="field">
+        <label for="token-input">x-game-token (JWT)</label>
+        <textarea id="token-input" name="token" required spellcheck="false" autocomplete="off"></textarea>
+      </div>
+      <div class="field">
+        <label for="guid-input">User GUID</label>
+        <input id="guid-input" name="guid" required spellcheck="false" autocomplete="off" placeholder="00000000-0000-0000-0000-000000000000" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="settings-logout" class="danger" hidden>Log out</button>
+        <span style="flex: 1"></span>
+        <button type="button" id="settings-cancel">Cancel</button>
+        <button type="submit" class="primary">Save</button>
+      </div>
+      <p class="meta-line">
+        How to find them manually: open <a href="https://fantasy.worldsurfleague.com" target="_blank" rel="noreferrer">fantasy.worldsurfleague.com</a> (logged in),
+        open DevTools → Application → Local Storage, and read the <code>wsl-game-token</code> entry.
+        It's a JSON object — copy <code>game_session_token</code> into the JWT field above and <code>guid</code> into the GUID field.
+        The bookmarklet does this automatically.
+      </p>
+    </form>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+
+const API = "https://gamesapi.worldsurfleague.com";
+const ENTITY = "ed0t4n$3!!";
+const TOUR_ID = 1;
+const PHASE_EVENT = 1;
+const TEAM_FETCH_CONCURRENCY = 5;
+const RANK_PAGE_SIZE = 10;
+const ASSETS = `${API}/static-assets/fantasy/static/build/images`;
+let IMG_VER = "0.05"; // overridden from translations feed if available
+
+const state = {
+  token: null,
+  userGuid: null,
+  leagues: [],
+  events: [],
+  surfersByGameday: new Map(),
+  surfersFallback: new Map(),
+  countries: new Map(),
+  currentLeagueId: null,
+  currentGamedayId: null,
+  currentPage: 1,
+  hasNextPage: false,
+};
+
+const $ = (sel) => document.querySelector(sel);
+
+// ------- credentials in URL hash (from bookmarklet or shared link) -------
+function ingestHashCredentials() {
+  if (!window.location.hash) return false;
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const token = params.get("token");
+  const guid = params.get("guid");
+  if (!token || !guid) return false;
+  localStorage.setItem("bf.token", token.trim());
+  localStorage.setItem("bf.userGuid", guid.trim());
+  // strip the hash so the token isn't sitting in the address bar / history
+  history.replaceState(null, "", window.location.pathname + window.location.search);
+  return true;
+}
+ingestHashCredentials();
+
+const ui = {
+  controls: $("#controls"),
+  leagueSelect: $("#league-select"),
+  eventSelect: $("#event-select"),
+  refresh: $("#refresh"),
+  status: $("#status"),
+  rankingPanel: $("#ranking-panel"),
+  rankingBody: $("#ranking tbody"),
+  pagination: $("#pagination"),
+  pageNum: $("#page-num"),
+  prevPage: $("#prev-page"),
+  nextPage: $("#next-page"),
+  userLine: $("#user-line"),
+  themeToggle: $("#theme-toggle"),
+  surferDetail: $("#surfer-detail"),
+  surferDetailBody: $("#surfer-detail .sd-body"),
+  settings: $("#settings"),
+  openSettings: $("#open-settings"),
+  settingsForm: $("#settings-form"),
+  tokenInput: $("#token-input"),
+  guidInput: $("#guid-input"),
+  cancelSettings: $("#settings-cancel"),
+  logoutBtn: $("#settings-logout"),
+  bookmarklet: $("#bookmarklet"),
+  shareRow: $("#share-row"),
+  shareLink: $("#share-link"),
+};
+
+// ------- bookmarklet generation -------
+function bookmarkletJs(targetOrigin) {
+  // Runs on fantasy.worldsurfleague.com. The WSL frontend stores both the
+  // GUID and the games-API token in a single localStorage entry under the
+  // key `wsl-game-token` as JSON: { guid, game_session_token, ... }.
+  const src = `(function(){
+var TARGET=${JSON.stringify(targetOrigin)};
+var raw=localStorage.getItem('wsl-game-token');
+if(!raw){alert('No wsl-game-token found in localStorage. Make sure you are logged in at fantasy.worldsurfleague.com.');return;}
+var data;try{data=JSON.parse(raw);}catch(e){alert('wsl-game-token is not valid JSON.');return;}
+var token=data&&data.game_session_token;
+var guid=data&&data.guid;
+if(!token||!guid){alert('wsl-game-token is missing game_session_token or guid. Try logging out and back in.');return;}
+location.href=TARGET+'/#token='+encodeURIComponent(token)+'&guid='+encodeURIComponent(guid);
+})()`.replace(/\s*\n\s*/g, '');
+  return "javascript:" + encodeURIComponent(src);
+}
+ui.bookmarklet.href = bookmarkletJs(window.location.origin);
+ui.bookmarklet.addEventListener("click", (e) => {
+  // If clicked directly (instead of dragged), it would run on this origin and fail.
+  e.preventDefault();
+  alert("Drag this button to your bookmarks bar instead of clicking it. Then go to fantasy.worldsurfleague.com (logged in) and click the bookmark.");
+});
+
+ui.shareLink.addEventListener("click", async () => {
+  if (!state.token || !state.userGuid) return;
+  const url = `${window.location.origin}/#token=${encodeURIComponent(state.token)}&guid=${encodeURIComponent(state.userGuid)}`;
+  if (navigator.share) {
+    try { await navigator.share({ url, title: "Better Fantasy connection link" }); return; } catch {}
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    ui.shareLink.textContent = "Link copied";
+    setTimeout(() => { ui.shareLink.textContent = "Copy share link"; }, 1500);
+  } catch {
+    prompt("Copy this URL and open it on the other device:", url);
+  }
+});
+
+ui.themeToggle.addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+  const next = cur === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("bf.theme", next);
+});
+
+// ------- storage -------
+function loadConfig() {
+  state.token = localStorage.getItem("bf.token");
+  state.userGuid = localStorage.getItem("bf.userGuid");
+}
+function saveConfig(token, guid) {
+  state.token = token.trim();
+  state.userGuid = guid.trim();
+  localStorage.setItem("bf.token", state.token);
+  localStorage.setItem("bf.userGuid", state.userGuid);
+}
+function saveSelection({ pushHistory = false } = {}) {
+  const lid = state.currentLeagueId;
+  const gid = state.currentGamedayId;
+  const page = state.currentPage;
+  if (lid != null) localStorage.setItem("bf.leagueId", String(lid));
+  if (gid != null) localStorage.setItem("bf.gamedayId", String(gid));
+  // sync URL — survives reload + is shareable
+  const params = new URLSearchParams(window.location.search);
+  if (lid != null) params.set("league", String(lid)); else params.delete("league");
+  if (gid != null) params.set("event", String(gid)); else params.delete("event");
+  if (page && page > 1) params.set("page", String(page)); else params.delete("page");
+  const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+  const navState = { leagueId: lid, gamedayId: gid, page };
+  if (pushHistory) {
+    history.pushState(navState, "", next);
+  } else {
+    history.replaceState(navState, "", next);
+  }
+}
+function loadSelection() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = (key) => {
+    const v = params.get(key);
+    const n = v == null ? null : Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const fromStorage = (key) => {
+    const n = Number(localStorage.getItem(key));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  return {
+    leagueId: fromUrl("league") ?? fromStorage("bf.leagueId"),
+    gamedayId: fromUrl("event") ?? fromStorage("bf.gamedayId"),
+    page: fromUrl("page") ?? 1,
+  };
+}
+
+// ------- HTTP -------
+async function apiGet(path, params = {}) {
+  const url = new URL(API + path);
+  url.searchParams.set("buster", Date.now().toString());
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+  }
+  const r = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      entity: ENTITY,
+      "x-game-token": state.token,
+    },
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+  const j = await r.json();
+  if (j.Meta && j.Meta.Success === false) {
+    const msg = j.Meta.Message || `RetVal=${j.Meta.RetVal}`;
+    throw new Error(`API error on ${path}: ${msg}`);
+  }
+  return j.Data;
+}
+async function feedGet(path) {
+  const url = new URL(API + path);
+  url.searchParams.set("v", Date.now().toString());
+  const r = await fetch(url.toString(), {
+    headers: {
+      Accept: "application/json",
+      entity: ENTITY,
+      "x-game-token": state.token,
+    },
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+  const j = await r.json();
+  return j.Data ? j.Data : j;
+}
+
+// ------- bootstrap -------
+async function bootstrap() {
+  setStatus("Loading…");
+  try {
+    const [leaguesData, schedule, countries, translations] = await Promise.all([
+      apiGet(`/fantasy/services/league/user/${encodeURIComponent(state.userGuid)}/private/leagues`, {
+        opt_type: 1, page_no: 1, top_no: 100, tour_id: TOUR_ID,
+      }),
+      feedGet(`/fantasy/feeds/schedule/${TOUR_ID}_en.json`),
+      feedGet(`/fantasy/feeds/countrylist/countries.json`),
+      feedGet(`/fantasy/feeds/translations/en.json`).catch(() => null),
+    ]);
+
+    state.leagues = leaguesData?.Value?.league_info ?? [];
+    state.events = schedule?.Value ?? [];
+    state.countries.clear();
+    for (const c of countries?.Value ?? []) {
+      state.countries.set(c.country_id, c);
+    }
+    const imgVer = translations?.Value?.imgVer;
+    if (imgVer != null) IMG_VER = String(imgVer);
+
+    populateLeagueSelect();
+    populateEventSelect();
+    ui.controls.hidden = false;
+
+    if (state.leagues.length && state.events.length) {
+      const saved = loadSelection();
+      const savedLeague = saved.leagueId && state.leagues.find((l) => l.user_leagueid === saved.leagueId);
+      const savedEvent = saved.gamedayId && state.events.find((e) => e.gameday_id === saved.gamedayId);
+      state.currentLeagueId = savedLeague ? savedLeague.user_leagueid : state.leagues[0].user_leagueid;
+      const currentEvent = savedEvent
+        ?? state.events.find((e) => e.gd_iscurrent === 1)
+        ?? [...state.events].reverse().find((e) => e.gd_iscurrent === 2 || e.gd_islocked === 1)
+        ?? state.events[0];
+      state.currentGamedayId = currentEvent.gameday_id;
+      state.currentPage = saved.page || 1;
+      ui.leagueSelect.value = String(state.currentLeagueId);
+      ui.eventSelect.value = String(state.currentGamedayId);
+      saveSelection();
+      await loadLeague();
+    } else {
+      setStatus(state.leagues.length ? "No events available." : "No leagues found for this user.");
+    }
+    updateUserLine();
+  } catch (err) {
+    setStatus(`Failed to load: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+async function loadSurferFeed(gamedayId) {
+  if (state.surfersByGameday.has(gamedayId)) return state.surfersByGameday.get(gamedayId);
+  let feed = null;
+  try {
+    feed = await feedGet(`/fantasy/feeds/players/${TOUR_ID}_${gamedayId}_en.json`);
+  } catch (err) {
+    console.warn(`No surfer feed for gameday ${gamedayId}:`, err.message);
+  }
+  const map = new Map();
+  for (const s of feed?.Value ?? []) {
+    map.set(s.athlete_id, s);
+    if (!state.surfersFallback.has(s.athlete_id)) {
+      state.surfersFallback.set(s.athlete_id, s);
+    }
+  }
+  state.surfersByGameday.set(gamedayId, map);
+  return map;
+}
+
+function populateLeagueSelect() {
+  ui.leagueSelect.innerHTML = "";
+  for (const lg of state.leagues) {
+    const opt = document.createElement("option");
+    opt.value = String(lg.user_leagueid);
+    const visibility = lg.is_public ? "public" : "private";
+    opt.textContent = `${lg.league_name} · ${lg.total_member} members · ${visibility}`;
+    ui.leagueSelect.appendChild(opt);
+  }
+}
+function populateEventSelect() {
+  ui.eventSelect.innerHTML = "";
+  for (const ev of state.events) {
+    const opt = document.createElement("option");
+    opt.value = String(ev.gameday_id);
+    const start = ev.start_date ? new Date(ev.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+    let status = "";
+    if (ev.gd_iscurrent === 1) status = " · live";
+    else if (ev.gd_iscurrent === 2) status = " · completed";
+    else if (ev.gd_islocked === 0) status = " · upcoming";
+    opt.textContent = `${ev.event_name}${start ? ` (${start})` : ""}${status}`;
+    ui.eventSelect.appendChild(opt);
+  }
+}
+
+// ------- league load -------
+async function loadLeague() {
+  if (!state.currentLeagueId || !state.currentGamedayId) return;
+  setStatus("Loading league rankings…");
+  ui.rankingPanel.hidden = true;
+  ui.rankingBody.innerHTML = "";
+
+  const event = state.events.find((e) => e.gameday_id === state.currentGamedayId);
+  if (event && event.gd_islocked === 0 && event.gd_iscurrent !== 1) {
+    const startStr = event.start_date
+      ? new Date(event.start_date).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })
+      : null;
+    ui.rankingPanel.hidden = false;
+    ui.rankingBody.innerHTML = `
+      <tr><td colspan="7" class="empty">
+        <strong>${escape(event.event_name || "Event")}</strong> hasn't started yet.<br>
+        ${startStr ? `Picks lock around <strong>${escape(startStr)}</strong>.` : "Picks haven't been locked yet."}
+      </td></tr>`;
+    setStatus("");
+    return;
+  }
+
+  try {
+    await loadSurferFeed(state.currentGamedayId);
+    const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
+      opt_type: 2,
+      page_no: state.currentPage,
+      top_no: RANK_PAGE_SIZE,
+      league_id: state.currentLeagueId,
+      tour_id: TOUR_ID,
+      gameday_id: state.currentGamedayId,
+      phaseid: PHASE_EVENT,
+    });
+    const rows = ranks?.Value?.data ?? [];
+    state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
+    updatePagination();
+
+    if (!rows.length) {
+      ui.rankingPanel.hidden = false;
+      ui.rankingBody.innerHTML = `<tr><td colspan="7" class="empty">No members on this page.</td></tr>`;
+      setStatus("");
+      return;
+    }
+
+    setStatus(`Loading ${rows.length} teams…`);
+    renderSkeleton(rows);
+    ui.rankingPanel.hidden = false;
+
+    await mapWithConcurrency(rows, TEAM_FETCH_CONCURRENCY, async (row) => {
+      try {
+        const team = await apiGet(`/fantasy/services/gameplay/view-other-team`, {
+          tourId: TOUR_ID,
+          gamedayId: state.currentGamedayId,
+          otherUserId: row.user_id,
+        });
+        const t = team?.Value?.data;
+        renderRow(row, t);
+      } catch (err) {
+        renderRow(row, null, err.message);
+      }
+    });
+
+    setStatus("");
+  } catch (err) {
+    setStatus(`Failed to load league: ${err.message}`, true);
+    console.error(err);
+  }
+}
+
+function updatePagination() {
+  const showPagination = state.currentPage > 1 || state.hasNextPage;
+  ui.pagination.hidden = !showPagination;
+  ui.pageNum.textContent = String(state.currentPage);
+  ui.prevPage.disabled = state.currentPage <= 1;
+  ui.nextPage.disabled = !state.hasNextPage;
+}
+
+function renderSkeleton(rows) {
+  ui.rankingBody.innerHTML = "";
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    tr.dataset.userId = String(row.user_id);
+    tr.innerHTML = `
+      <td class="rank">${row.rank ?? "—"}</td>
+      <td>
+        <div class="player-name">${escape(row.team_name || row.user_name || "—")}</div>
+        <div class="player-meta">${escape(row.user_name || "")}</div>
+      </td>
+      <td class="pts">…</td>
+      <td class="pts">…</td>
+      <td class="tier-col" data-tier-label="Tier A"><span class="muted">…</span></td>
+      <td class="tier-col" data-tier-label="Tier B"><span class="muted">…</span></td>
+      <td class="tier-col" data-tier-label="Tier C"><span class="muted">…</span></td>
+    `;
+    ui.rankingBody.appendChild(tr);
+  }
+}
+
+function renderRow(row, team, errorMsg) {
+  const tr = ui.rankingBody.querySelector(`tr[data-user-id="${row.user_id}"]`);
+  if (!tr) return;
+  if (errorMsg) {
+    tr.cells[2].textContent = "—";
+    tr.cells[3].textContent = "—";
+    tr.cells[4].innerHTML = `<span class="muted">load failed</span>`;
+    tr.cells[5].innerHTML = "";
+    tr.cells[6].innerHTML = "";
+    return;
+  }
+  if (!team) {
+    tr.cells[2].textContent = "—";
+    tr.cells[3].textContent = "—";
+    tr.cells[4].innerHTML = `<span class="muted">no team</span>`;
+    tr.cells[5].innerHTML = "";
+    tr.cells[6].innerHTML = "";
+    return;
+  }
+  if (team.team_name) {
+    const nameEl = tr.cells[1].querySelector(".player-name");
+    if (nameEl) nameEl.textContent = team.team_name;
+  }
+  tr.cells[2].innerHTML = renderPtsCell(team.gd_pt, team.gd_rank);
+  tr.cells[3].innerHTML = renderPtsCell(team.tour_pt, team.tour_rank);
+
+  const eliminated = new Set(team.gd_eliminated_player || []);
+  const powerSurfers = new Set([team.male_captainid, team.female_captainid].filter(Boolean));
+  const groups = groupPicksByTier(team.arr_male_playerid || [], team.arr_female_playerid || []);
+  tr.cells[4].replaceChildren(renderTierCell(groups.A, powerSurfers, eliminated));
+  tr.cells[5].replaceChildren(renderTierCell(groups.B, powerSurfers, eliminated));
+  tr.cells[6].replaceChildren(renderTierCell(groups.C, powerSurfers, eliminated));
+}
+
+function renderPtsCell(pts, rank) {
+  const ptsText = formatPts(pts);
+  const rankText = Number.isFinite(rank) ? `rank #${rank.toLocaleString()}` : "";
+  return `<div class="pts-cell"><span>${ptsText}</span>${rankText ? `<span class="rank-sub">${rankText}</span>` : ""}</div>`;
+}
+
+const TIER_LABEL = { 1: "A", 2: "B", 3: "C", A: "A", B: "B", C: "C" };
+
+function lookupSurfer(athleteId) {
+  const map = state.surfersByGameday.get(state.currentGamedayId);
+  return (map && map.get(athleteId)) || state.surfersFallback.get(athleteId) || null;
+}
+
+function groupPicksByTier(maleIds, femaleIds) {
+  const groups = { A: [], B: [], C: [] };
+  const push = (id, gender) => {
+    const s = lookupSurfer(id);
+    const tier = s ? TIER_LABEL[s.category] : null;
+    (groups[tier] || (groups.unknown ||= [])).push({ id, gender, surfer: s });
+  };
+  for (const id of maleIds) push(id, "M");
+  for (const id of femaleIds) push(id, "F");
+  // sort: men first, then women, then by name
+  for (const tier of ["A", "B", "C"]) {
+    groups[tier].sort((a, b) => {
+      if (a.gender !== b.gender) return a.gender === "M" ? -1 : 1;
+      const an = (a.surfer?.last_name || "").toLowerCase();
+      const bn = (b.surfer?.last_name || "").toLowerCase();
+      return an.localeCompare(bn);
+    });
+  }
+  return groups;
+}
+
+function getInitials(s) {
+  if (!s) return "??";
+  const f = (s.first_name || "").trim();
+  const l = (s.last_name || "").trim();
+  return ((f[0] || "") + (l[0] || "")).toUpperCase() || "??";
+}
+
+function makeSurferAvatar(athleteId, initials) {
+  const av = document.createElement("div");
+  av.className = "avatar";
+  if (athleteId != null) {
+    const img = document.createElement("img");
+    img.className = "avatar-img";
+    img.alt = initials;
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.src = `${ASSETS}/players/${athleteId}.png?v=${IMG_VER}`;
+    img.addEventListener("error", () => {
+      av.textContent = initials;
+    });
+    av.appendChild(img);
+  } else {
+    av.textContent = initials;
+  }
+  return av;
+}
+
+function makeFlag(countryId, fallbackText) {
+  if (countryId == null) {
+    if (!fallbackText) return null;
+    const span = document.createElement("span");
+    span.textContent = fallbackText;
+    return span;
+  }
+  const img = document.createElement("img");
+  img.className = "flag-img";
+  img.alt = fallbackText || "";
+  img.title = fallbackText || "";
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.src = `${ASSETS}/flags/${countryId}.png?v=${IMG_VER}`;
+  img.addEventListener("error", () => {
+    if (fallbackText) {
+      const span = document.createElement("span");
+      span.textContent = fallbackText;
+      img.replaceWith(span);
+    } else {
+      img.remove();
+    }
+  });
+  return img;
+}
+
+function renderTierCell(picks, powerSurfers, eliminated) {
+  const wrap = document.createElement("div");
+  wrap.className = "tier-cell";
+  if (!picks.length) {
+    wrap.innerHTML = `<span class="muted" style="font-size:11px">—</span>`;
+    return wrap;
+  }
+  const gamedayMap = state.surfersByGameday.get(state.currentGamedayId);
+  const totalCount = picks.length;
+  const aliveCount = picks.filter((p) => !eliminated.has(p.id)).length;
+
+  for (const { id, gender, surfer } of picks) {
+    const isOut = eliminated.has(id);
+    const isPower = powerSurfers.has(id);
+    const stats = gamedayMap ? gamedayMap.get(id) : null;
+    const tierKey = surfer ? TIER_LABEL[surfer.category] : null;
+    const country = surfer ? state.countries.get(surfer.country_id) : null;
+    const cls = ["surfer"];
+    if (tierKey) cls.push(`tier-${tierKey}`);
+    if (isPower) cls.push("power");
+    if (isOut) cls.push("eliminated");
+
+    const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `#${id}`;
+    const countryAbbr = country ? (country.abbr3 || country.abbr2 || "") : "";
+    const ptsText = stats && Number.isFinite(stats.gd_points) ? formatPts(stats.gd_points) : "";
+    const breakdown = stats ? formatBreakdownTitle(stats) : "";
+    const tooltipParts = [
+      fullName,
+      gender === "M" ? "Men" : "Women",
+      countryAbbr ? `${country.name || countryAbbr}` : "",
+      tierKey ? `Tier ${tierKey}` : "",
+      isPower ? "Power surfer" : "",
+      isOut ? "Eliminated" : "Active",
+      ptsText ? `${ptsText} pts` : "",
+      breakdown && ptsText ? `(${breakdown})` : "",
+    ].filter(Boolean);
+
+    const div = document.createElement("div");
+    div.className = cls.join(" ");
+    div.title = tooltipParts.join(" · ");
+    div.tabIndex = 0;
+    div.setAttribute("role", "button");
+    div.dataset.athleteId = String(id);
+    div.dataset.power = isPower ? "1" : "0";
+    div.dataset.eliminated = isOut ? "1" : "0";
+    div.dataset.gender = gender || "";
+
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "avatar-wrap";
+    avatarWrap.appendChild(makeSurferAvatar(id, getInitials(surfer)));
+    if (isPower) {
+      const star = document.createElement("span");
+      star.className = "power-badge";
+      star.textContent = "★";
+      avatarWrap.appendChild(star);
+    }
+    if (isOut) {
+      const cross = document.createElement("span");
+      cross.className = "elim-cross";
+      avatarWrap.appendChild(cross);
+    }
+    const dot = document.createElement("span");
+    dot.className = `gender-dot ${gender}`;
+    dot.textContent = gender;
+    avatarWrap.appendChild(dot);
+    div.appendChild(avatarWrap);
+
+    if (ptsText) {
+      const pts = document.createElement("span");
+      pts.className = "pts";
+      pts.textContent = ptsText;
+      div.appendChild(pts);
+    }
+
+    const flag = makeFlag(surfer?.country_id, countryAbbr);
+    if (flag) {
+      const country = document.createElement("span");
+      country.className = "country";
+      country.appendChild(flag);
+      div.appendChild(country);
+    }
+
+    wrap.appendChild(div);
+  }
+
+  if (totalCount > 0) {
+    const summary = document.createElement("span");
+    summary.className = "tier-summary";
+    summary.style.flexBasis = "100%";
+    summary.style.order = "-1";
+    summary.textContent = `${aliveCount} of ${totalCount} active`;
+    wrap.prepend(summary);
+  }
+
+  return wrap;
+}
+
+function showSurferDetail(athleteId, opts = {}) {
+  const { isPower = false, isEliminated = false, gender = null } = opts;
+  const surfer = lookupSurfer(athleteId);
+  const stats = state.surfersByGameday.get(state.currentGamedayId)?.get(athleteId);
+  const country = surfer ? state.countries.get(surfer.country_id) : null;
+  const tierKey = surfer ? TIER_LABEL[surfer.category] : null;
+  const initials = getInitials(surfer);
+  const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `Athlete #${athleteId}`;
+  const flagAbbr = country ? (country.abbr3 || country.abbr2 || country.name || "") : "";
+  const event = state.events.find((e) => e.gameday_id === state.currentGamedayId);
+
+  const body = ui.surferDetailBody;
+  body.innerHTML = "";
+
+  // Header
+  const header = document.createElement("div");
+  header.className = "sd-header";
+  header.style.setProperty("--tier-color",
+    tierKey === "A" ? "var(--tier-a)" :
+    tierKey === "B" ? "var(--tier-b)" :
+    tierKey === "C" ? "var(--tier-c)" : "var(--border)");
+
+  const photo = document.createElement("div");
+  photo.className = "sd-photo" + (isPower ? " power" : "") + (isEliminated ? " eliminated" : "");
+  const photoImg = document.createElement("img");
+  photoImg.alt = initials;
+  photoImg.loading = "lazy";
+  photoImg.decoding = "async";
+  photoImg.src = `${ASSETS}/players/${athleteId}.png?v=${IMG_VER}`;
+  photoImg.addEventListener("error", () => { photo.textContent = initials; });
+  photo.appendChild(photoImg);
+  header.appendChild(photo);
+
+  const info = document.createElement("div");
+  info.className = "sd-info";
+  const nameEl = document.createElement("div");
+  nameEl.className = "sd-name";
+  nameEl.textContent = fullName;
+  info.appendChild(nameEl);
+
+  const meta = document.createElement("div");
+  meta.className = "sd-meta";
+  const flagEl = makeFlag(surfer?.country_id, flagAbbr);
+  if (flagEl) meta.appendChild(flagEl);
+  const metaText = [
+    country?.name || flagAbbr || null,
+    gender === "M" ? "Men" : gender === "F" ? "Women" : null,
+  ].filter(Boolean).join(" · ");
+  if (metaText) {
+    const span = document.createElement("span");
+    span.textContent = metaText;
+    meta.appendChild(span);
+  }
+  info.appendChild(meta);
+
+  const pills = document.createElement("div");
+  pills.className = "sd-pills";
+  if (tierKey) {
+    const p = document.createElement("span");
+    p.className = `sd-pill tier-${tierKey}`;
+    p.textContent = `Tier ${tierKey}`;
+    pills.appendChild(p);
+  }
+  if (isPower) {
+    const p = document.createElement("span");
+    p.className = "sd-pill power";
+    p.textContent = "Power surfer";
+    pills.appendChild(p);
+  }
+  const statusPill = document.createElement("span");
+  statusPill.className = `sd-pill ${isEliminated ? "out" : "active"}`;
+  statusPill.textContent = isEliminated ? "Eliminated" : "Active";
+  pills.appendChild(statusPill);
+  info.appendChild(pills);
+
+  header.appendChild(info);
+  body.appendChild(header);
+
+  // Event points section
+  const ptsSection = document.createElement("div");
+  ptsSection.className = "sd-section";
+  const ptsH = document.createElement("h3");
+  ptsH.textContent = `${event?.event_name || "Event"} points`;
+  ptsSection.appendChild(ptsH);
+  if (stats && Number.isFinite(stats.gd_points)) {
+    const big = document.createElement("div");
+    big.className = "sd-pts-large" + (isEliminated ? " eliminated" : "");
+    big.textContent = formatPts(stats.gd_points);
+    ptsSection.appendChild(big);
+    if (Number.isFinite(stats.selected_percentage)) {
+      const sub = document.createElement("div");
+      sub.className = "sd-pts-sub";
+      sub.style.fontSize = "12px"; sub.style.color = "var(--muted)"; sub.style.marginTop = "4px";
+      sub.textContent = `Picked by ${stats.selected_percentage}% of teams`;
+      ptsSection.appendChild(sub);
+    }
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "sd-empty";
+    empty.textContent = "No points data for this event yet.";
+    ptsSection.appendChild(empty);
+  }
+  body.appendChild(ptsSection);
+
+  // Round breakdown
+  if (stats) {
+    const rounds = [
+      ["R1", stats.r1], ["R2", stats.r2], ["R3", stats.r3],
+      ["R32", stats.r32_points], ["R16", stats.r16_points],
+      ["QF", stats.qf_points], ["SF", stats.sf_points], ["F", stats.f_points],
+    ].filter(([, v]) => Number.isFinite(v) && v !== 0);
+    if (rounds.length) {
+      const sec = document.createElement("div");
+      sec.className = "sd-section";
+      const h = document.createElement("h3");
+      h.textContent = "Round breakdown";
+      sec.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "sd-rounds";
+      for (const [label, v] of rounds) {
+        const card = document.createElement("div");
+        card.className = "sd-round";
+        card.innerHTML = `<div class="sd-round-label">${label}</div><div class="sd-round-value">${formatPts(v)}</div>`;
+        grid.appendChild(card);
+      }
+      sec.appendChild(grid);
+      body.appendChild(sec);
+    }
+  }
+
+  // Stats
+  if (stats) {
+    const items = [
+      ["Avg heat score", stats.ahs],
+      ["Heat win %", stats.hwp != null ? stats.hwp + "%" : null],
+      ["Max heat score", stats.max_hs],
+      ["Excellent heats (8+)", stats.num_ehs],
+    ].filter(([, v]) => v != null && v !== "");
+    if (items.length) {
+      const sec = document.createElement("div");
+      sec.className = "sd-section";
+      const h = document.createElement("h3");
+      h.textContent = "Event stats";
+      sec.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "sd-stats";
+      for (const [label, v] of items) {
+        const wrap = document.createElement("div");
+        const display = typeof v === "number"
+          ? (Number.isInteger(v) ? String(v) : formatPts(v))
+          : String(v);
+        wrap.innerHTML = `<div class="sd-stat-label">${escape(label)}</div><div class="sd-stat-value">${escape(display)}</div>`;
+        grid.appendChild(wrap);
+      }
+      sec.appendChild(grid);
+      body.appendChild(sec);
+    }
+  }
+
+  ui.surferDetail.showModal();
+}
+
+function formatBreakdownTitle(s) {
+  const parts = [
+    ["R1", s.r1], ["R2", s.r2], ["R3", s.r3],
+    ["R32", s.r32_points], ["R16", s.r16_points],
+    ["QF", s.qf_points], ["SF", s.sf_points], ["F", s.f_points],
+  ].filter(([, v]) => Number.isFinite(v) && v !== 0);
+  return parts.map(([k, v]) => `${k} ${v}`).join("  ·  ") || "no scoring rounds yet";
+}
+
+function formatPts(n) {
+  if (n == null || !Number.isFinite(n)) return "—";
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function setStatus(msg, isError) {
+  ui.status.textContent = msg || "";
+  ui.status.className = "status" + (isError ? " error" : "");
+}
+
+function updateUserLine() {
+  if (state.userGuid) {
+    ui.userLine.textContent = `as ${state.userGuid.slice(0, 8)}…`;
+  }
+}
+
+async function mapWithConcurrency(items, n, fn) {
+  let i = 0;
+  const workers = Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      await fn(items[idx], idx);
+    }
+  });
+  await Promise.all(workers);
+}
+
+// ------- wiring -------
+ui.openSettings.addEventListener("click", () => {
+  const loggedIn = !!(state.token && state.userGuid);
+  ui.tokenInput.value = state.token || "";
+  ui.guidInput.value = state.userGuid || "";
+  ui.shareRow.hidden = !loggedIn;
+  ui.logoutBtn.hidden = !loggedIn;
+  ui.settings.showModal();
+});
+
+ui.logoutBtn.addEventListener("click", () => {
+  if (!confirm("Log out and clear stored credentials on this device?")) return;
+  for (const k of ["bf.token", "bf.userGuid", "bf.leagueId", "bf.gamedayId"]) {
+    localStorage.removeItem(k);
+  }
+  // Also drop URL state so reload doesn't restore selections.
+  history.replaceState(null, "", window.location.pathname);
+  window.location.reload();
+});
+ui.cancelSettings.addEventListener("click", () => ui.settings.close());
+ui.settingsForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const token = ui.tokenInput.value.trim();
+  const guid = ui.guidInput.value.trim();
+  if (!token || !guid) return;
+  saveConfig(token, guid);
+  ui.settings.close();
+  bootstrap();
+});
+
+ui.leagueSelect.addEventListener("change", () => {
+  state.currentLeagueId = Number(ui.leagueSelect.value);
+  state.currentPage = 1;
+  saveSelection({ pushHistory: true });
+  loadLeague();
+});
+ui.eventSelect.addEventListener("change", () => {
+  state.currentGamedayId = Number(ui.eventSelect.value);
+  state.currentPage = 1;
+  saveSelection({ pushHistory: true });
+  loadLeague();
+});
+ui.prevPage.addEventListener("click", () => {
+  if (state.currentPage <= 1) return;
+  state.currentPage -= 1;
+  saveSelection({ pushHistory: true });
+  loadLeague();
+});
+ui.nextPage.addEventListener("click", () => {
+  if (!state.hasNextPage) return;
+  state.currentPage += 1;
+  saveSelection({ pushHistory: true });
+  loadLeague();
+});
+
+// delegated click on any rendered surfer → open detail dialog
+ui.rankingBody.addEventListener("click", (e) => {
+  const el = e.target.closest(".surfer");
+  if (!el || !ui.rankingBody.contains(el)) return;
+  const id = Number(el.dataset.athleteId);
+  if (!Number.isFinite(id)) return;
+  showSurferDetail(id, {
+    isPower: el.dataset.power === "1",
+    isEliminated: el.dataset.eliminated === "1",
+    gender: el.dataset.gender || null,
+  });
+});
+ui.rankingBody.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const el = e.target.closest(".surfer");
+  if (!el) return;
+  e.preventDefault();
+  el.click();
+});
+
+// surfer detail dialog: close on backdrop click and × button
+ui.surferDetail.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t === ui.surferDetail) { ui.surferDetail.close(); return; }
+  if (t && typeof t.closest === "function" && t.closest("[data-close]")) {
+    ui.surferDetail.close();
+  }
+});
+
+// surface any uncaught error visibly (helps when console isn't open)
+window.addEventListener("error", (e) => {
+  console.error(e.error || e.message);
+  setStatus(`JS error: ${e.message}`, true);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  console.error(e.reason);
+  setStatus(`Async error: ${e.reason && e.reason.message ? e.reason.message : e.reason}`, true);
+});
+
+window.addEventListener("popstate", () => {
+  const sel = loadSelection();
+  let changed = false;
+  if (sel.leagueId && sel.leagueId !== state.currentLeagueId &&
+      state.leagues.some((l) => l.user_leagueid === sel.leagueId)) {
+    state.currentLeagueId = sel.leagueId;
+    ui.leagueSelect.value = String(sel.leagueId);
+    changed = true;
+  }
+  if (sel.gamedayId && sel.gamedayId !== state.currentGamedayId &&
+      state.events.some((e) => e.gameday_id === sel.gamedayId)) {
+    state.currentGamedayId = sel.gamedayId;
+    ui.eventSelect.value = String(sel.gamedayId);
+    changed = true;
+  }
+  const newPage = sel.page || 1;
+  if (newPage !== state.currentPage) {
+    state.currentPage = newPage;
+    changed = true;
+  }
+  if (changed) loadLeague();
+});
+ui.refresh.addEventListener("click", () => loadLeague());
+
+// ------- service worker -------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch((err) => {
+      console.warn("SW registration failed:", err);
+    });
+  });
+}
+
+// ------- init -------
+loadConfig();
+if (state.token && state.userGuid) {
+  updateUserLine();
+  bootstrap();
+} else {
+  ui.settings.showModal();
+}
+</script>
+</body>
+</html>
