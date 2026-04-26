@@ -167,17 +167,18 @@
     border: 1px solid currentColor; border-radius: 3px; padding: 0 4px;
     vertical-align: 2px;
   }
-  /* fantasy "Season — overall" mode hides event + tier columns */
+  /* fantasy "Season — overall" mode hides event + men + women columns */
   table.overall-mode th:nth-child(3), table.overall-mode td:nth-child(3),
   table.overall-mode th:nth-child(5), table.overall-mode td:nth-child(5),
-  table.overall-mode th:nth-child(6), table.overall-mode td:nth-child(6),
-  table.overall-mode th:nth-child(7), table.overall-mode td:nth-child(7) {
+  table.overall-mode th:nth-child(6), table.overall-mode td:nth-child(6) {
     display: none;
   }
-  /* bracket "Season — overall" mode hides the picks column (now col 3) */
-  table.bracket-overall th:nth-child(3), table.bracket-overall td:nth-child(3) {
+  /* bracket "Season — overall" mode hides Men + Women columns (col 3 and col 4) */
+  table.bracket-overall th:nth-child(3), table.bracket-overall td:nth-child(3),
+  table.bracket-overall th:nth-child(4), table.bracket-overall td:nth-child(4) {
     display: none;
   }
+  /* bracket "Season — overall" mode now hides both gender columns (3 + 4) */
   /* "you" row pinned to the top of a leaderboard when not naturally on the page */
   tbody tr.self-pinned td { border-bottom: 2px solid var(--accent); }
   tbody tr.self-pinned + tr td { padding-top: 16px; }
@@ -187,7 +188,10 @@
   .pts-cell .rank-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
   .player-name { font-weight: 600; }
   .player-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .tier-cell { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+  .tier-cell { display: flex; flex-direction: column; gap: 10px; }
+  .tier-group { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+  .tier-group-row { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+  .tier-group-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
   .surfer {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     width: 54px; font-size: 10px; line-height: 1.1; color: var(--muted);
@@ -233,21 +237,21 @@
     font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
     font-size: 11px;
   }
+  .surfer .tier-dot {
+    position: absolute; bottom: -2px; right: -2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    font-size: 9px; font-weight: 700; color: white;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--panel); z-index: 2; line-height: 1;
+  }
+  .surfer .tier-dot.tier-A { background: var(--tier-a); }
+  .surfer .tier-dot.tier-B { background: var(--tier-b); }
+  .surfer .tier-dot.tier-C { background: var(--tier-c); }
   .surfer .country img.flag-img {
     width: 16px; height: 11px; object-fit: cover;
     border-radius: 1px; display: inline-block; vertical-align: middle;
     box-shadow: 0 0 0 1px var(--border);
   }
-  .surfer .gender-dot {
-    position: absolute; bottom: -2px; right: -2px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: var(--dot-bg); border: 1.5px solid var(--border);
-    font-size: 9px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--muted); z-index: 2;
-  }
-  .surfer .gender-dot.M { color: var(--gender-m); }
-  .surfer .gender-dot.F { color: var(--gender-f); }
   .tier-summary {
     display: block; font-size: 10px; color: var(--muted); font-weight: 500;
     margin-bottom: 2px; letter-spacing: .03em; text-transform: none;
@@ -386,9 +390,9 @@
   .bd-discipline-header { padding: 14px 24px 4px; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
 
   /* bracket leaderboard inline picks */
-  .bp-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bp-row { display: flex; flex-wrap: wrap; gap: 8px; }
   .bp-pick {
-    position: relative; width: 32px; height: 32px;
+    position: relative; width: 42px; height: 42px;
     border-radius: 50%; overflow: hidden; background: var(--avatar-bg);
     border: 2px solid var(--muted); flex-shrink: 0;
   }
@@ -448,42 +452,40 @@
     .field select, .field input { min-width: 0; width: 100%; }
     .field { flex: 1 1 140px; }
 
-    table, thead, tbody, tr, td { display: block; }
-    thead { display: none; }
-    tbody tr {
+    #ranking, #ranking thead, #ranking tbody, #ranking tr, #ranking td { display: block; }
+    #ranking thead { display: none; }
+    #ranking tbody tr {
       padding: 14px 14px;
       border-bottom: 1px solid var(--border);
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas:
         "rank info pts"
-        "tier-a tier-a tier-a"
-        "tier-b tier-b tier-b"
-        "tier-c tier-c tier-c";
+        "men men men"
+        "women women women";
       gap: 6px 12px;
       align-items: start;
       min-width: 0;
     }
-    tbody td { padding: 0; border: none; min-width: 0; }
-    tbody td:nth-child(1) { grid-area: rank; font-size: 18px; align-self: center; }
-    tbody td:nth-child(2) {
+    #ranking tbody td { padding: 0; border: none; min-width: 0; }
+    #ranking tbody td:nth-child(1) { grid-area: rank; font-size: 18px; align-self: center; }
+    #ranking tbody td:nth-child(2) {
       grid-area: info; min-width: 0; align-self: center; overflow: hidden;
     }
-    tbody td:nth-child(2) .player-name,
-    tbody td:nth-child(2) .player-meta {
+    #ranking tbody td:nth-child(2) .player-name,
+    #ranking tbody td:nth-child(2) .player-meta {
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    tbody td:nth-child(3) { grid-area: pts; align-self: center; text-align: right; }
-    tbody td:nth-child(3) .pts-cell { align-items: flex-end; }
-    tbody td:nth-child(4) { display: none; }
-    tbody td:nth-child(5) { grid-area: tier-a; min-width: 0; }
-    tbody td:nth-child(6) { grid-area: tier-b; min-width: 0; }
-    tbody td:nth-child(7) { grid-area: tier-c; min-width: 0; }
-    tbody td.tier-col::before {
-      content: attr(data-tier-label);
+    #ranking tbody td:nth-child(3) { grid-area: pts; align-self: center; text-align: right; }
+    #ranking tbody td:nth-child(3) .pts-cell { align-items: flex-end; }
+    #ranking tbody td:nth-child(4) { display: none; }
+    #ranking tbody td:nth-child(5) { grid-area: men; min-width: 0; }
+    #ranking tbody td:nth-child(6) { grid-area: women; min-width: 0; }
+    #ranking tbody td.gender-col::before {
+      content: attr(data-gender-label);
       display: block;
-      font-size: 10px; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .05em;
+      font-size: 10px; color: var(--muted); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
       margin-bottom: 6px;
     }
     .player-name { font-size: 14px; }
@@ -505,7 +507,7 @@
     .bd-heat { grid-template-columns: 56px 1fr 26px 1fr; gap: 6px; font-size: 11px; }
     .bd-pick img { width: 24px; height: 24px; }
 
-    /* bracket leaderboard on mobile: rank/user/points on the top row, picks below full-width */
+    /* bracket leaderboard on mobile: rank/user/points on top row, men + women stacked below */
     #bracket-ranking thead { display: none; }
     #bracket-ranking, #bracket-ranking tbody, #bracket-ranking tr, #bracket-ranking td { display: block; }
     #bracket-ranking tbody tr {
@@ -513,7 +515,8 @@
       grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas:
         "rank user pts"
-        "picks picks picks";
+        "men men men"
+        "women women women";
       gap: 6px 12px;
       padding: 14px 14px;
       border-bottom: 1px solid var(--border);
@@ -524,13 +527,21 @@
     #bracket-ranking tbody td:nth-child(1) { grid-area: rank; font-size: 18px; align-self: center; }
     #bracket-ranking tbody td:nth-child(2) { grid-area: user; align-self: center; overflow: hidden; }
     #bracket-ranking tbody td:nth-child(2) .player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #bracket-ranking tbody td:nth-child(3) { grid-area: picks; }
-    #bracket-ranking tbody td:nth-child(4) { grid-area: pts; align-self: center; text-align: right; }
-    /* in overall mode there's no picks cell to render anyway; collapse the 2nd row */
+    #bracket-ranking tbody td:nth-child(3) { grid-area: men; }
+    #bracket-ranking tbody td:nth-child(4) { grid-area: women; }
+    #bracket-ranking tbody td:nth-child(5) { grid-area: pts; align-self: center; text-align: right; }
+    #bracket-ranking tbody td.bp-cell::before {
+      content: attr(data-gender-label);
+      display: block;
+      font-size: 10px; color: var(--muted); font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    /* in overall mode there are no picks rows to render; collapse to a single row */
     table.bracket-overall.bracket-overall tbody tr {
       grid-template-areas: "rank user pts";
     }
-    .bp-pick { width: 28px; height: 28px; border-width: 2px; }
+    .bp-pick { width: 36px; height: 36px; border-width: 2px; }
   }
   .view[hidden] { display: none; }
 </style>
@@ -586,9 +597,8 @@
           <th>Team</th>
           <th class="pts">Event pts</th>
           <th class="pts">Season pts</th>
-          <th>Tier A</th>
-          <th>Tier B</th>
-          <th>Tier C</th>
+          <th>Men</th>
+          <th>Women</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -622,7 +632,8 @@
           <tr>
             <th class="rank">#</th>
             <th>User</th>
-            <th>Late-stage picks</th>
+            <th>Men</th>
+            <th>Women</th>
             <th class="pts" title="Per event, the API totals men's + women's bracket points together.">Points</th>
           </tr>
         </thead>
@@ -1090,7 +1101,7 @@ async function loadLeague() {
       : null;
     ui.rankingPanel.hidden = false;
     ui.rankingBody.innerHTML = `
-      <tr><td colspan="7" class="empty">
+      <tr><td colspan="6" class="empty">
         <strong>${escape(event.event_name || "Event")}</strong> hasn't started yet.<br>
         ${startStr ? `Picks lock around <strong>${escape(startStr)}</strong>.` : "Picks haven't been locked yet."}
       </td></tr>`;
@@ -1115,7 +1126,7 @@ async function loadLeague() {
 
     if (!rows.length) {
       ui.rankingPanel.hidden = false;
-      ui.rankingBody.innerHTML = `<tr><td colspan="7" class="empty">No members on this page.</td></tr>`;
+      ui.rankingBody.innerHTML = `<tr><td colspan="6" class="empty">No members on this page.</td></tr>`;
       setStatus("");
       return;
     }
@@ -1164,7 +1175,7 @@ async function loadLeagueOverall() {
     updatePagination();
     if (!rows.length) {
       ui.rankingPanel.hidden = false;
-      ui.rankingBody.innerHTML = `<tr><td colspan="7" class="empty">No standings yet.</td></tr>`;
+      ui.rankingBody.innerHTML = `<tr><td colspan="6" class="empty">No standings yet.</td></tr>`;
       setStatus("");
       return;
     }
@@ -1200,9 +1211,8 @@ function renderOverallRows(rows) {
       </td>
       <td class="pts">—</td>
       <td class="pts">${formatPts(row.overall_point)}</td>
-      <td class="tier-col" data-tier-label="Tier A"></td>
-      <td class="tier-col" data-tier-label="Tier B"></td>
-      <td class="tier-col" data-tier-label="Tier C"></td>
+      <td class="gender-col" data-gender-label="Men"></td>
+      <td class="gender-col" data-gender-label="Women"></td>
     `;
     ui.rankingBody.appendChild(tr);
   }
@@ -1239,9 +1249,8 @@ function renderSkeleton(rows) {
       </td>
       <td class="pts">…</td>
       <td class="pts">…</td>
-      <td class="tier-col" data-tier-label="Tier A"><span class="muted">…</span></td>
-      <td class="tier-col" data-tier-label="Tier B"><span class="muted">…</span></td>
-      <td class="tier-col" data-tier-label="Tier C"><span class="muted">…</span></td>
+      <td class="gender-col" data-gender-label="Men"><span class="muted">…</span></td>
+      <td class="gender-col" data-gender-label="Women"><span class="muted">…</span></td>
     `;
     ui.rankingBody.appendChild(tr);
   }
@@ -1255,7 +1264,6 @@ function renderRow(row, team, errorMsg) {
     tr.cells[3].textContent = "—";
     tr.cells[4].innerHTML = `<span class="muted">load failed</span>`;
     tr.cells[5].innerHTML = "";
-    tr.cells[6].innerHTML = "";
     return;
   }
   if (!team) {
@@ -1263,7 +1271,6 @@ function renderRow(row, team, errorMsg) {
     tr.cells[3].textContent = "—";
     tr.cells[4].innerHTML = `<span class="muted">no team</span>`;
     tr.cells[5].innerHTML = "";
-    tr.cells[6].innerHTML = "";
     return;
   }
   if (team.team_name) {
@@ -1275,10 +1282,9 @@ function renderRow(row, team, errorMsg) {
 
   const eliminated = new Set(team.gd_eliminated_player || []);
   const powerSurfers = new Set([team.male_captainid, team.female_captainid].filter(Boolean));
-  const groups = groupPicksByTier(team.arr_male_playerid || [], team.arr_female_playerid || []);
-  tr.cells[4].replaceChildren(renderTierCell(groups.A, powerSurfers, eliminated));
-  tr.cells[5].replaceChildren(renderTierCell(groups.B, powerSurfers, eliminated));
-  tr.cells[6].replaceChildren(renderTierCell(groups.C, powerSurfers, eliminated));
+  const groups = groupPicksByGender(team.arr_male_playerid || [], team.arr_female_playerid || []);
+  tr.cells[4].replaceChildren(renderGenderCell(groups.M, powerSurfers, eliminated));
+  tr.cells[5].replaceChildren(renderGenderCell(groups.F, powerSurfers, eliminated));
 }
 
 function renderPtsCell(pts, rank) {
@@ -1294,25 +1300,21 @@ function lookupSurfer(athleteId) {
   return (map && map.get(athleteId)) || state.surfersFallback.get(athleteId) || null;
 }
 
-function groupPicksByTier(maleIds, femaleIds) {
-  const groups = { A: [], B: [], C: [] };
-  const push = (id, gender) => {
-    const s = lookupSurfer(id);
-    const tier = s ? TIER_LABEL[s.category] : null;
-    (groups[tier] || (groups.unknown ||= [])).push({ id, gender, surfer: s });
+function groupPicksByGender(maleIds, femaleIds) {
+  const tierRank = (s) => {
+    const t = s ? TIER_LABEL[s.category] : null;
+    return t === "A" ? 1 : t === "B" ? 2 : t === "C" ? 3 : 4;
   };
-  for (const id of maleIds) push(id, "M");
-  for (const id of femaleIds) push(id, "F");
-  // sort: men first, then women, then by name
-  for (const tier of ["A", "B", "C"]) {
-    groups[tier].sort((a, b) => {
-      if (a.gender !== b.gender) return a.gender === "M" ? -1 : 1;
-      const an = (a.surfer?.last_name || "").toLowerCase();
-      const bn = (b.surfer?.last_name || "").toLowerCase();
-      return an.localeCompare(bn);
-    });
-  }
-  return groups;
+  const make = (ids, gender) => ids.map((id) => {
+    const s = lookupSurfer(id);
+    return { id, gender, surfer: s };
+  }).sort((a, b) => {
+    const ra = tierRank(a.surfer);
+    const rb = tierRank(b.surfer);
+    if (ra !== rb) return ra - rb;
+    return (a.surfer?.last_name || "").localeCompare(b.surfer?.last_name || "");
+  });
+  return { M: make(maleIds, "M"), F: make(femaleIds, "F") };
 }
 
 function getInitials(s) {
@@ -1368,101 +1370,101 @@ function makeFlag(countryId, fallbackText) {
   return img;
 }
 
-function renderTierCell(picks, powerSurfers, eliminated) {
+function renderGenderCell(picks, powerSurfers, eliminated) {
   const wrap = document.createElement("div");
   wrap.className = "tier-cell";
   if (!picks.length) {
     wrap.innerHTML = `<span class="muted" style="font-size:11px">—</span>`;
     return wrap;
   }
-  const gamedayMap = state.surfersByGameday.get(state.currentGamedayId);
   const totalCount = picks.length;
   const aliveCount = picks.filter((p) => !eliminated.has(p.id)).length;
-
-  for (const { id, gender, surfer } of picks) {
-    const isOut = eliminated.has(id);
-    const isPower = powerSurfers.has(id);
-    const stats = gamedayMap ? gamedayMap.get(id) : null;
-    const tierKey = surfer ? TIER_LABEL[surfer.category] : null;
-    const country = surfer ? state.countries.get(surfer.country_id) : null;
-    const cls = ["surfer"];
-    if (tierKey) cls.push(`tier-${tierKey}`);
-    if (isPower) cls.push("power");
-    if (isOut) cls.push("eliminated");
-
-    const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `#${id}`;
-    const countryAbbr = country ? (country.abbr3 || country.abbr2 || "") : "";
-    const ptsText = stats && Number.isFinite(stats.gd_points) ? formatPts(stats.gd_points) : "";
-    const breakdown = stats ? formatBreakdownTitle(stats) : "";
-    const tooltipParts = [
-      fullName,
-      gender === "M" ? "Men" : "Women",
-      countryAbbr ? `${country.name || countryAbbr}` : "",
-      tierKey ? `Tier ${tierKey}` : "",
-      isPower ? "Power surfer" : "",
-      isOut ? "Eliminated" : "Active",
-      ptsText ? `${ptsText} pts` : "",
-      breakdown && ptsText ? `(${breakdown})` : "",
-    ].filter(Boolean);
-
-    const div = document.createElement("div");
-    div.className = cls.join(" ");
-    div.title = tooltipParts.join(" · ");
-    div.tabIndex = 0;
-    div.setAttribute("role", "button");
-    div.dataset.athleteId = String(id);
-    div.dataset.power = isPower ? "1" : "0";
-    div.dataset.eliminated = isOut ? "1" : "0";
-    div.dataset.gender = gender || "";
-
-    const avatarWrap = document.createElement("div");
-    avatarWrap.className = "avatar-wrap";
-    avatarWrap.appendChild(makeSurferAvatar(id, getInitials(surfer)));
-    if (isPower) {
-      const star = document.createElement("span");
-      star.className = "power-badge";
-      star.textContent = "★";
-      avatarWrap.appendChild(star);
-    }
-    if (isOut) {
-      const cross = document.createElement("span");
-      cross.className = "elim-cross";
-      avatarWrap.appendChild(cross);
-    }
-    const dot = document.createElement("span");
-    dot.className = `gender-dot ${gender}`;
-    dot.textContent = gender;
-    avatarWrap.appendChild(dot);
-    div.appendChild(avatarWrap);
-
-    if (ptsText) {
-      const pts = document.createElement("span");
-      pts.className = "pts";
-      pts.textContent = ptsText;
-      div.appendChild(pts);
-    }
-
-    const flag = makeFlag(surfer?.country_id, countryAbbr);
-    if (flag) {
-      const country = document.createElement("span");
-      country.className = "country";
-      country.appendChild(flag);
-      div.appendChild(country);
-    }
-
-    wrap.appendChild(div);
-  }
-
-  if (totalCount > 0) {
-    const summary = document.createElement("span");
-    summary.className = "tier-summary";
-    summary.style.flexBasis = "100%";
-    summary.style.order = "-1";
-    summary.textContent = `${aliveCount} of ${totalCount} active`;
-    wrap.prepend(summary);
-  }
-
+  const summary = document.createElement("div");
+  summary.className = "tier-summary";
+  summary.textContent = `${aliveCount} of ${totalCount} active`;
+  wrap.appendChild(summary);
+  const row = document.createElement("div");
+  row.className = "tier-group-row";
+  for (const pick of picks) row.appendChild(makeSurferEl(pick, powerSurfers, eliminated));
+  wrap.appendChild(row);
   return wrap;
+}
+
+function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
+  const gamedayMap = state.surfersByGameday.get(state.currentGamedayId);
+  const isOut = eliminated.has(id);
+  const isPower = powerSurfers.has(id);
+  const stats = gamedayMap ? gamedayMap.get(id) : null;
+  const tierKey = surfer ? TIER_LABEL[surfer.category] : null;
+  const country = surfer ? state.countries.get(surfer.country_id) : null;
+  const cls = ["surfer"];
+  if (tierKey) cls.push(`tier-${tierKey}`);
+  if (isPower) cls.push("power");
+  if (isOut) cls.push("eliminated");
+
+  const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `#${id}`;
+  const countryAbbr = country ? (country.abbr3 || country.abbr2 || "") : "";
+  const ptsText = stats && Number.isFinite(stats.gd_points) ? formatPts(stats.gd_points) : "";
+  const breakdown = stats ? formatBreakdownTitle(stats) : "";
+  const tooltipParts = [
+    fullName,
+    gender === "M" ? "Men" : "Women",
+    countryAbbr ? `${country.name || countryAbbr}` : "",
+    tierKey ? `Tier ${tierKey}` : "",
+    isPower ? "Power surfer" : "",
+    isOut ? "Eliminated" : "Active",
+    ptsText ? `${ptsText} pts` : "",
+    breakdown && ptsText ? `(${breakdown})` : "",
+  ].filter(Boolean);
+
+  const div = document.createElement("div");
+  div.className = cls.join(" ");
+  div.title = tooltipParts.join(" · ");
+  div.tabIndex = 0;
+  div.setAttribute("role", "button");
+  div.dataset.athleteId = String(id);
+  div.dataset.power = isPower ? "1" : "0";
+  div.dataset.eliminated = isOut ? "1" : "0";
+  div.dataset.gender = gender || "";
+
+  const avatarWrap = document.createElement("div");
+  avatarWrap.className = "avatar-wrap";
+  avatarWrap.appendChild(makeSurferAvatar(id, getInitials(surfer)));
+  if (isPower) {
+    const star = document.createElement("span");
+    star.className = "power-badge";
+    star.textContent = "★";
+    avatarWrap.appendChild(star);
+  }
+  if (isOut) {
+    const cross = document.createElement("span");
+    cross.className = "elim-cross";
+    avatarWrap.appendChild(cross);
+  }
+  if (tierKey) {
+    const td = document.createElement("span");
+    td.className = `tier-dot tier-${tierKey}`;
+    td.textContent = tierKey;
+    avatarWrap.appendChild(td);
+  }
+  div.appendChild(avatarWrap);
+
+  if (ptsText) {
+    const pts = document.createElement("span");
+    pts.className = "pts";
+    pts.textContent = ptsText;
+    div.appendChild(pts);
+  }
+
+  const flag = makeFlag(surfer?.country_id, countryAbbr);
+  if (flag) {
+    const countrySpan = document.createElement("span");
+    countrySpan.className = "country";
+    countrySpan.appendChild(flag);
+    div.appendChild(countrySpan);
+  }
+
+  return div;
 }
 
 function showSurferDetail(athleteId, opts = {}) {
@@ -2028,7 +2030,7 @@ async function loadBracketLeaderboard() {
 function renderBracketLeaderboard(rows, eventKey, selfRow) {
   ui.bracketBody.innerHTML = "";
   if (!rows.length && !selfRow) {
-    const colspan = eventKey === "overall" ? "3" : "4";
+    const colspan = eventKey === "overall" ? "3" : "5";
     ui.bracketBody.innerHTML = `<tr><td colspan="${colspan}" class="empty">No entries on this page.</td></tr>`;
     return;
   }
@@ -2053,7 +2055,8 @@ function makeBracketRow(row, eventKey) {
   tr.innerHTML = `
     <td class="rank">${row.rank ?? "—"}</td>
     <td><div class="player-name">${escape(row.userName || "—")}</div></td>
-    <td class="bp-cell"><span class="muted" style="font-size:11px">…</span></td>
+    <td class="bp-cell bp-cell-m" data-gender-label="Men"><span class="muted" style="font-size:11px">…</span></td>
+    <td class="bp-cell bp-cell-f" data-gender-label="Women"><span class="muted" style="font-size:11px">…</span></td>
     <td class="pts">${formatPts(row.points)}</td>
   `;
   if (eventKey !== "overall") tr.style.cursor = "pointer";
@@ -2099,8 +2102,9 @@ async function enrichBracketRowsWithPicks(rows, mensEventId, womensEventId) {
     } catch (err) {
       const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(row.userId)}"]`);
       if (tr) {
-        const cell = tr.querySelector(".bp-cell");
-        if (cell) cell.innerHTML = `<span class="muted" style="font-size:11px">load failed</span>`;
+        for (const c of tr.querySelectorAll(".bp-cell")) {
+          c.innerHTML = `<span class="muted" style="font-size:11px">load failed</span>`;
+        }
       }
     }
   });
@@ -2114,20 +2118,20 @@ function cssEscape(s) {
 function renderBracketRowPicks(userId, { mPicks, mensCtx, fPicks, womensCtx }) {
   const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(userId)}"]`);
   if (!tr) return;
-  const cell = tr.querySelector(".bp-cell");
-  if (!cell) return;
-
-  cell.innerHTML = "";
-  const mBlock = renderPicksBlock("Men", mPicks, mensCtx);
-  const fBlock = renderPicksBlock("Women", fPicks, womensCtx);
-  if (mBlock) cell.appendChild(mBlock);
-  if (fBlock) cell.appendChild(fBlock);
-  if (!mBlock && !fBlock) {
-    cell.innerHTML = `<span class="muted" style="font-size:11px">no picks</span>`;
-  }
+  const mCell = tr.querySelector(".bp-cell-m");
+  const fCell = tr.querySelector(".bp-cell-f");
+  const populate = (cell, picks, ctx) => {
+    if (!cell) return;
+    cell.innerHTML = "";
+    const block = renderPicksBlock(picks, ctx);
+    if (block) cell.appendChild(block);
+    else cell.innerHTML = `<span class="muted" style="font-size:11px">—</span>`;
+  };
+  populate(mCell, mPicks, mensCtx);
+  populate(fCell, fPicks, womensCtx);
 }
 
-function renderPicksBlock(label, picks, ctx) {
+function renderPicksBlock(picks, ctx) {
   if (!ctx || !picks || picks.length === 0) return null;
   const { participants, matchIndex, lateStages } = ctx;
 
@@ -2159,10 +2163,6 @@ function renderPicksBlock(label, picks, ctx) {
 
   const wrap = document.createElement("div");
   wrap.className = "bp-block";
-  const head = document.createElement("div");
-  head.className = "bp-block-label";
-  head.textContent = label;
-  wrap.appendChild(head);
 
   const lateRow = document.createElement("div");
   lateRow.className = "bp-row";
