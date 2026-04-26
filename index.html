@@ -383,6 +383,7 @@
   .bd-result.wrong { color: var(--warn); }
   .bd-result.pending { color: var(--muted); font-size: 11px; font-weight: 500; }
   .bd-side-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+  .bd-discipline-header { padding: 14px 24px 4px; font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
 
   /* bracket leaderboard inline picks */
   .bp-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -403,6 +404,8 @@
   }
   .bp-summary { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
   .bp-summary strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .bp-block + .bp-block { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .bp-block-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
   .dialog-body { padding: 22px 24px; }
   .dialog-body h2 { margin: 0 0 4px; font-size: 16px; }
   .dialog-body p { color: var(--muted); margin: 0 0 18px; }
@@ -601,10 +604,6 @@
   <div class="view view-brackets" hidden>
     <div class="panel controls" id="bracket-controls" hidden>
       <div class="field">
-        <label for="bracket-tour-select">Tour</label>
-        <select id="bracket-tour-select"></select>
-      </div>
-      <div class="field">
         <label for="bracket-league-select">League</label>
         <select id="bracket-league-select"></select>
       </div>
@@ -710,11 +709,6 @@ let IMG_VER = "0.05"; // overridden from translations feed if available
 // Active CT tournament. Both Men's and Women's brackets are exposed under the
 // same tournamentId; the difference is per-event: event.id (M) vs event.jointEventId (F).
 const ACTIVE_TOURNAMENT_ID = "74f5030f-952f-47ee-8b68-d3939a035674";
-const DISCIPLINES = [
-  { key: "M", label: "Men's CT" },
-  { key: "F", label: "Women's CT" },
-];
-
 const state = {
   token: null,
   userGuid: null,
@@ -734,7 +728,6 @@ const state = {
   bracketLeaguesByTournament: new Map(),    // tournamentId -> leagues (flat list)
   bracketEventFeeds: new Map(),             // eventId -> full feed
   currentTournamentId: ACTIVE_TOURNAMENT_ID,
-  currentDiscipline: "M",                   // "M" | "F"
   currentBracketLeagueId: "1",
   currentBracketEventId: "overall",         // "overall" or an event/jointEvent UUID
   currentBracketPage: 1,
@@ -790,7 +783,6 @@ const ui = {
   viewFantasy: document.querySelector(".view-fantasy"),
   viewBrackets: document.querySelector(".view-brackets"),
   bracketControls: $("#bracket-controls"),
-  bracketTourSelect: $("#bracket-tour-select"),
   bracketLeagueSelect: $("#bracket-league-select"),
   bracketEventSelect: $("#bracket-event-select"),
   bracketRefresh: $("#bracket-refresh"),
@@ -863,8 +855,6 @@ function loadConfig() {
   state.bracketToken = localStorage.getItem("bf.bracketToken");
   // restore bracket selection
   const params = new URLSearchParams(window.location.search);
-  const bDisc = params.get("bdisc") || localStorage.getItem("bf.discipline");
-  if (bDisc === "F" || bDisc === "M") state.currentDiscipline = bDisc;
   const bLeague = params.get("bleague") || localStorage.getItem("bf.bracketLeagueId");
   if (bLeague) state.currentBracketLeagueId = bLeague;
   const bEvent = params.get("bevent") || localStorage.getItem("bf.bracketEventId");
@@ -974,16 +964,31 @@ async function feedGet(path) {
 async function bootstrap() {
   setStatus("Loading…");
   try {
-    const [leaguesData, schedule, countries, translations] = await Promise.all([
+    const [leaguesData, leagueListData, schedule, countries, translations] = await Promise.all([
       apiGet(`/fantasy/services/league/user/${encodeURIComponent(state.userGuid)}/private/leagues`, {
         opt_type: 1, page_no: 1, top_no: 100, tour_id: TOUR_ID,
       }),
+      apiGet(`/fantasy/services/league/public/league-list`, {
+        tour_id: TOUR_ID, opt_type: 1,
+      }).catch(() => null),
       feedGet(`/fantasy/feeds/schedule/${TOUR_ID}_en.json`),
       feedGet(`/fantasy/feeds/countrylist/countries.json`),
       feedGet(`/fantasy/feeds/translations/en.json`).catch(() => null),
     ]);
 
-    state.leagues = leaguesData?.Value?.league_info ?? [];
+    const privateLeagues = leaguesData?.Value?.league_info ?? [];
+    const publicJoined = (leagueListData?.Value?.data ?? [])
+      .filter((l) => l.IsJoined === 1)
+      .map((l) => ({
+        user_leagueid: parseInt(l.Id, 10) || l.Id,
+        league_name: l.LeagueName,
+        total_member: l.TotalMembers,
+        is_public: 1,
+        is_admin: 0,
+        rank: l.Rank,
+        cur_points: l.Points,
+      }));
+    state.leagues = [...publicJoined, ...privateLeagues];
     state.events = schedule?.Value ?? [];
     state.countries.clear();
     for (const c of countries?.Value ?? []) {
@@ -1174,16 +1179,16 @@ async function loadLeagueOverall() {
 
 function renderOverallRows(rows) {
   ui.rankingBody.innerHTML = "";
-  const sorted = [...rows].sort((a, b) => {
-    const ay = a.guid === state.userGuid ? 1 : 0;
-    const by = b.guid === state.userGuid ? 1 : 0;
-    return by - ay;
-  });
+  const my = (state.userGuid || "").toLowerCase();
+  const isYou = (r) => my && (r.guid || "").toLowerCase() === my;
+  const youRow = rows.find(isYou);
+  const others = rows.filter((r) => !isYou(r));
+  const ordered = youRow ? [youRow, ...others] : others;
   let pinnedYou = false;
-  for (const row of sorted) {
+  for (const row of ordered) {
     const tr = document.createElement("tr");
     tr.dataset.userId = String(row.user_id);
-    if (row.guid && row.guid === state.userGuid) {
+    if (isYou(row)) {
       tr.classList.add("is-you");
       if (!pinnedYou) { tr.classList.add("self-pinned"); pinnedYou = true; }
     }
@@ -1213,17 +1218,16 @@ function updatePagination() {
 
 function renderSkeleton(rows) {
   ui.rankingBody.innerHTML = "";
-  // Promote the current-user row to the top of the page (matches brackets behaviour).
-  const sorted = [...rows].sort((a, b) => {
-    const ay = a.guid === state.userGuid ? 1 : 0;
-    const by = b.guid === state.userGuid ? 1 : 0;
-    return by - ay;
-  });
+  const my = (state.userGuid || "").toLowerCase();
+  const isYou = (r) => my && (r.guid || "").toLowerCase() === my;
+  const youRow = rows.find(isYou);
+  const others = rows.filter((r) => !isYou(r));
+  const ordered = youRow ? [youRow, ...others] : others;
   let pinnedYou = false;
-  for (const row of sorted) {
+  for (const row of ordered) {
     const tr = document.createElement("tr");
     tr.dataset.userId = String(row.user_id);
-    if (row.guid && row.guid === state.userGuid) {
+    if (isYou(row)) {
       tr.classList.add("is-you");
       if (!pinnedYou) { tr.classList.add("self-pinned"); pinnedYou = true; }
     }
@@ -1791,12 +1795,6 @@ window.addEventListener("popstate", () => {
   // bracket params
   const params = new URLSearchParams(window.location.search);
   let bracketChanged = false;
-  const bDisc = params.get("bdisc");
-  if ((bDisc === "M" || bDisc === "F") && bDisc !== state.currentDiscipline) {
-    state.currentDiscipline = bDisc;
-    if (ui.bracketTourSelect) ui.bracketTourSelect.value = bDisc;
-    bracketChanged = true;
-  }
   const bLeague = params.get("bleague");
   if (bLeague && bLeague !== String(state.currentBracketLeagueId)) {
     state.currentBracketLeagueId = bLeague;
@@ -1827,17 +1825,14 @@ const BRACKET_PAGE_SIZE = 10;
 function saveBracketSelection({ pushHistory = false } = {}) {
   const lid = state.currentBracketLeagueId;
   const eid = state.currentBracketEventId;
-  const disc = state.currentDiscipline;
   const page = state.currentBracketPage;
   if (lid != null) localStorage.setItem("bf.bracketLeagueId", String(lid));
   if (eid != null) localStorage.setItem("bf.bracketEventId", String(eid));
-  if (disc) localStorage.setItem("bf.discipline", disc);
   if (page) localStorage.setItem("bf.bracketPage", String(page));
 
   const params = new URLSearchParams(window.location.search);
   if (lid != null) params.set("bleague", String(lid)); else params.delete("bleague");
   if (eid != null) params.set("bevent", String(eid)); else params.delete("bevent");
-  if (disc) params.set("bdisc", disc); else params.delete("bdisc");
   if (page && page > 1) params.set("bpage", String(page)); else params.delete("bpage");
   const next = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
   if (pushHistory) history.pushState(null, "", next);
@@ -1873,30 +1868,9 @@ function setBracketStatus(msg, isError) {
   ui.bracketStatus.className = "status" + (isError ? " error" : "");
 }
 
-function populateBracketTourSelect() {
-  ui.bracketTourSelect.innerHTML = "";
-  for (const d of DISCIPLINES) {
-    const opt = document.createElement("option");
-    opt.value = d.key;
-    opt.textContent = d.label;
-    ui.bracketTourSelect.appendChild(opt);
-  }
-  ui.bracketTourSelect.value = state.currentDiscipline;
-}
-
-function disciplineForEventId(eventId) {
-  if (eventId === "overall") return state.currentDiscipline;
-  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
-  for (const ev of events) {
-    if (ev.id === eventId) return "M";
-    if (ev.jointEventId === eventId) return "F";
-  }
-  return state.currentDiscipline;
-}
-
-// The leaderboard API attributes combined (men's + women's) points to the men's
-// eventId only; querying with the women's jointEventId returns no points. So we
-// always normalise to the men's eventId before hitting that endpoint.
+// The leaderboard endpoint stores combined (men's + women's) points under the
+// men's eventId only. Always normalise any women's jointEventId we may have
+// stored to the matching men's id before calling the leaderboard.
 function canonicalLeaderboardEventId(eventId) {
   if (eventId === "overall") return "overall";
   const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
@@ -1904,6 +1878,12 @@ function canonicalLeaderboardEventId(eventId) {
     if (ev.id === eventId || ev.jointEventId === eventId) return ev.id;
   }
   return eventId;
+}
+
+function findBracketEvent(eventId) {
+  if (eventId === "overall") return null;
+  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  return events.find((e) => e.id === eventId || e.jointEventId === eventId) || null;
 }
 
 function populateBracketLeagueSelect() {
@@ -1930,19 +1910,24 @@ function populateBracketEventSelect() {
   overall.textContent = "Season — overall";
   ui.bracketEventSelect.appendChild(overall);
   const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
-  const disc = state.currentDiscipline;
   for (const ev of events) {
     const opt = document.createElement("option");
-    opt.value = disc === "F" ? ev.jointEventId : ev.id;
+    // Always use the men's eventId as the canonical option value.
+    opt.value = ev.id;
     const start = ev.startAt ? new Date(ev.startAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-    const statusKey = disc === "F" ? (ev.jointEventStatus || ev.status) : ev.status;
     let status = "";
-    if (statusKey === "completed") status = " · completed";
-    else if (statusKey === "locked") status = " · locked";
-    else if (statusKey === "live") status = " · live";
-    else if (statusKey === "upcoming") status = " · upcoming";
+    if (ev.status === "completed") status = " · completed";
+    else if (ev.status === "locked") status = " · locked";
+    else if (ev.status === "live") status = " · live";
+    else if (ev.status === "upcoming") status = " · upcoming";
     opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
     ui.bracketEventSelect.appendChild(opt);
+  }
+  // Migrate any previously-stored women's jointEventId to the canonical men's id.
+  const cur = state.currentBracketEventId;
+  if (cur && cur !== "overall") {
+    const ev = findBracketEvent(cur);
+    if (ev) state.currentBracketEventId = ev.id;
   }
   ui.bracketEventSelect.value = state.currentBracketEventId || "overall";
 }
@@ -1981,15 +1966,8 @@ async function bootstrapBrackets() {
       ensureBracketTournament(state.currentTournamentId),
       ensureBracketLeagues(state.currentTournamentId),
     ]);
-    // Now that events are loaded, infer discipline from any preserved event UUID.
-    if (state.currentBracketEventId !== "overall") {
-      state.currentDiscipline = disciplineForEventId(state.currentBracketEventId);
-    }
-    populateBracketTourSelect();
     populateBracketLeagueSelect();
     populateBracketEventSelect();
-    // make sure the dropdown values reflect the restored state (defaults can override)
-    ui.bracketTourSelect.value = state.currentDiscipline;
     if (state.currentBracketLeagueId) ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
     if (state.currentBracketEventId) ui.bracketEventSelect.value = String(state.currentBracketEventId);
     ui.bracketControls.hidden = false;
@@ -2034,12 +2012,12 @@ async function loadBracketLeaderboard() {
     ui.bracketPanel.hidden = false;
     setBracketStatus("");
     if (!isOverall && slice.length) {
-      // Include the pinned self row in picks enrichment so its picks render too.
       const enrich = [...slice];
       if (selfRow && selfRow.userId && !slice.some((r) => r.userId === selfRow.userId)) {
         enrich.unshift(selfRow);
       }
-      enrichBracketRowsWithPicks(enrich, eventKey);
+      const ev = findBracketEvent(eventKey);
+      if (ev) enrichBracketRowsWithPicks(enrich, ev.id, ev.jointEventId);
     }
   } catch (err) {
     setBracketStatus(`Failed to load leaderboard: ${err.message}`, true);
@@ -2082,17 +2060,10 @@ function makeBracketRow(row, eventKey) {
   return tr;
 }
 
-async function enrichBracketRowsWithPicks(rows, eventId) {
-  let eventFeed;
-  try {
-    eventFeed = await ensureBracketEventFeed(eventId);
-  } catch {
-    return;
-  }
-  // Pre-index participants and matches.
+function buildPicksContext(eventFeed) {
   const participants = new Map();
   const matchIndex = new Map();
-  const lateStages = new Set(); // matchIds in QF/SF/F
+  const lateStages = new Set();
   for (const stage of eventFeed.stages || []) {
     const isLate = /quarter|semi|final/i.test(stage.stageName || "");
     for (const m of stage.matches || []) {
@@ -2101,14 +2072,30 @@ async function enrichBracketRowsWithPicks(rows, eventId) {
       for (const p of m.participants || []) participants.set(p.id, p);
     }
   }
+  return { participants, matchIndex, lateStages };
+}
+
+async function enrichBracketRowsWithPicks(rows, mensEventId, womensEventId) {
+  const [mensFeed, womensFeed] = await Promise.all([
+    mensEventId ? ensureBracketEventFeed(mensEventId).catch(() => null) : null,
+    womensEventId ? ensureBracketEventFeed(womensEventId).catch(() => null) : null,
+  ]);
+  const mensCtx = mensFeed ? buildPicksContext(mensFeed) : null;
+  const womensCtx = womensFeed ? buildPicksContext(womensFeed) : null;
 
   await mapWithConcurrency(rows, 5, async (row) => {
     try {
-      const res = await bracketGet(
-        `/bracket/services/v1/predictions/others/${state.currentTournamentId}/${eventId}/${row.userId}`
-      );
-      const matches = res?.matches ?? res?.response?.matches ?? [];
-      renderBracketRowPicks(row.userId, matches, { participants, matchIndex, lateStages });
+      const [mRes, fRes] = await Promise.all([
+        mensEventId
+          ? bracketGet(`/bracket/services/v1/predictions/others/${state.currentTournamentId}/${mensEventId}/${row.userId}`).catch(() => null)
+          : null,
+        womensEventId
+          ? bracketGet(`/bracket/services/v1/predictions/others/${state.currentTournamentId}/${womensEventId}/${row.userId}`).catch(() => null)
+          : null,
+      ]);
+      const mPicks = mRes?.matches ?? mRes?.response?.matches ?? [];
+      const fPicks = fRes?.matches ?? fRes?.response?.matches ?? [];
+      renderBracketRowPicks(row.userId, { mPicks, mensCtx, fPicks, womensCtx });
     } catch (err) {
       const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(row.userId)}"]`);
       if (tr) {
@@ -2124,16 +2111,28 @@ function cssEscape(s) {
   return String(s).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
 }
 
-function renderBracketRowPicks(userId, picks, ctx) {
+function renderBracketRowPicks(userId, { mPicks, mensCtx, fPicks, womensCtx }) {
   const tr = ui.bracketBody.querySelector(`tr[data-user-id="${cssEscape(userId)}"]`);
   if (!tr) return;
   const cell = tr.querySelector(".bp-cell");
   if (!cell) return;
 
+  cell.innerHTML = "";
+  const mBlock = renderPicksBlock("Men", mPicks, mensCtx);
+  const fBlock = renderPicksBlock("Women", fPicks, womensCtx);
+  if (mBlock) cell.appendChild(mBlock);
+  if (fBlock) cell.appendChild(fBlock);
+  if (!mBlock && !fBlock) {
+    cell.innerHTML = `<span class="muted" style="font-size:11px">no picks</span>`;
+  }
+}
+
+function renderPicksBlock(label, picks, ctx) {
+  if (!ctx || !picks || picks.length === 0) return null;
   const { participants, matchIndex, lateStages } = ctx;
 
   // Stage tally
-  const tally = {}; // stageName -> {right, scored, total}
+  const tally = {};
   for (const pick of picks) {
     const ref = matchIndex.get(pick.matchId);
     if (!ref) continue;
@@ -2147,7 +2146,7 @@ function renderBracketRowPicks(userId, picks, ctx) {
   }
   const tallyEntries = Object.entries(tally).sort((a, b) => a[1].order - b[1].order);
 
-  // Late-stage avatars (QF + SF + F), explicitly sorted so QF → SF → F regardless of API order
+  // QF → SF → F avatars, sorted
   const latePicks = picks
     .filter((p) => lateStages.has(p.matchId))
     .map((p) => ({ pick: p, ref: matchIndex.get(p.matchId) }))
@@ -2157,9 +2156,16 @@ function renderBracketRowPicks(userId, picks, ctx) {
       if (so !== 0) return so;
       return (a.ref.match.matchNumber || 0) - (b.ref.match.matchNumber || 0);
     });
+
+  const wrap = document.createElement("div");
+  wrap.className = "bp-block";
+  const head = document.createElement("div");
+  head.className = "bp-block-label";
+  head.textContent = label;
+  wrap.appendChild(head);
+
   const lateRow = document.createElement("div");
   lateRow.className = "bp-row";
-  let renderedAvatars = 0;
   for (const { pick, ref } of latePicks) {
     const surfer = participants.get(pick.selectedPlayerId);
     const winnerSet = !!ref?.match?.winnerId;
@@ -2175,11 +2181,8 @@ function renderBracketRowPicks(userId, picks, ctx) {
     div.title = tooltip;
     div.innerHTML = `${photo ? `<img src="${escape(photo)}" alt="" loading="lazy">` : ""}${stageTag ? `<span class="stage-tag">${escape(stageTag)}</span>` : ""}`;
     lateRow.appendChild(div);
-    renderedAvatars++;
   }
-
-  cell.innerHTML = "";
-  if (renderedAvatars) cell.appendChild(lateRow);
+  if (lateRow.children.length) wrap.appendChild(lateRow);
 
   if (tallyEntries.length) {
     const sum = document.createElement("div");
@@ -2190,12 +2193,10 @@ function renderBracketRowPicks(userId, picks, ctx) {
         return `${escape(name.replace("Round ", "R").replace("Quarterfinals", "QF").replace("Semifinals", "SF").replace("Final", "F"))}: ${correct}`;
       })
       .join(" · ");
-    cell.appendChild(sum);
+    wrap.appendChild(sum);
   }
 
-  if (!renderedAvatars && !tallyEntries.length) {
-    cell.innerHTML = `<span class="muted" style="font-size:11px">no picks</span>`;
-  }
+  return wrap;
 }
 
 function updateBracketPagination() {
@@ -2215,14 +2216,25 @@ async function ensureBracketEventFeed(eventId) {
 
 async function showBracketDetail(userId, userName, eventId) {
   const tournamentId = state.currentTournamentId;
+  const ev = findBracketEvent(eventId);
+  if (!ev) return;
   setBracketStatus("Loading picks…");
   try {
-    const [picksRes, eventFeed] = await Promise.all([
-      bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${eventId}/${userId}`),
-      ensureBracketEventFeed(eventId),
+    const [mFeed, fFeed, mPicksRes, fPicksRes] = await Promise.all([
+      ensureBracketEventFeed(ev.id).catch(() => null),
+      ev.jointEventId ? ensureBracketEventFeed(ev.jointEventId).catch(() => null) : null,
+      bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${ev.id}/${userId}`).catch(() => null),
+      ev.jointEventId
+        ? bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${ev.jointEventId}/${userId}`).catch(() => null)
+        : null,
     ]);
     setBracketStatus("");
-    renderBracketDetail({ userName, eventFeed, picks: picksRes?.matches ?? picksRes?.response?.matches ?? [] });
+    renderBracketDetail({
+      userName,
+      eventName: ev.name,
+      mens: mFeed ? { feed: mFeed, picks: mPicksRes?.matches ?? mPicksRes?.response?.matches ?? [] } : null,
+      womens: fFeed ? { feed: fFeed, picks: fPicksRes?.matches ?? fPicksRes?.response?.matches ?? [] } : null,
+    });
     ui.bracketDetail.showModal();
   } catch (err) {
     setBracketStatus(`Failed to load picks: ${err.message}`, true);
@@ -2230,15 +2242,26 @@ async function showBracketDetail(userId, userName, eventId) {
   }
 }
 
-function renderBracketDetail({ userName, eventFeed, picks }) {
+function renderBracketDetail({ userName, eventName, mens, womens }) {
   const body = ui.bracketDetailBody;
   body.innerHTML = "";
 
-  // Index picks by matchId
+  const header = document.createElement("div");
+  header.className = "bd-header";
+  header.innerHTML = `
+    <div class="bd-name">${escape(userName)}</div>
+    <div class="bd-meta"><span><strong>${escape(eventName || "")}</strong></span></div>
+  `;
+  body.appendChild(header);
+
+  if (mens) renderDetailDiscipline(body, "Men's bracket", mens.feed, mens.picks);
+  if (womens) renderDetailDiscipline(body, "Women's bracket", womens.feed, womens.picks);
+}
+
+function renderDetailDiscipline(body, label, eventFeed, picks) {
   const pickById = new Map();
   for (const p of picks) pickById.set(p.matchId, p.selectedPlayerId);
 
-  // Index participants for fast lookup
   const allParticipants = new Map();
   for (const stage of eventFeed.stages || []) {
     for (const m of stage.matches || []) {
@@ -2246,19 +2269,11 @@ function renderBracketDetail({ userName, eventFeed, picks }) {
     }
   }
 
-  // Header
   const header = document.createElement("div");
-  header.className = "bd-header";
-  header.innerHTML = `
-    <div class="bd-name">${escape(userName)}</div>
-    <div class="bd-meta">
-      <span><strong>${escape(eventFeed.eventName || "")}</strong></span>
-      <span>${escape((eventFeed.status || "").replace(/_/g, " "))}</span>
-    </div>
-  `;
+  header.className = "bd-discipline-header";
+  header.textContent = label;
   body.appendChild(header);
 
-  // Stages
   for (const stage of eventFeed.stages || []) {
     const matches = stage.matches || [];
     let correct = 0, scored = 0, total = 0;
@@ -2276,25 +2291,10 @@ function renderBracketDetail({ userName, eventFeed, picks }) {
     h.innerHTML = `${escape(stage.stageName || "")}<span class="stage-summary">${scored ? `${correct}/${scored} correct` : `${total} heat${total === 1 ? "" : "s"}`}</span>`;
     sec.appendChild(h);
 
-    // Optional column labels (first stage only)
-    if (stage.orderNo === 1) {
-      const labels = document.createElement("div");
-      labels.className = "bd-heat";
-      labels.style.borderTop = "none";
-      labels.innerHTML = `
-        <span class="bd-side-label">Heat</span>
-        <span class="bd-side-label">Picked</span>
-        <span class="bd-side-label" style="text-align:center"></span>
-        <span class="bd-side-label">Winner</span>
-      `;
-      sec.appendChild(labels);
-    }
-
     for (const m of matches) {
       const pickedId = pickById.get(m.matchId);
       const picked = pickedId ? allParticipants.get(pickedId) : null;
       const winner = m.winnerId ? allParticipants.get(m.winnerId) : null;
-
       const isCorrect = m.winnerId && pickedId === m.winnerId;
       const isWrong = m.winnerId && pickedId && pickedId !== m.winnerId;
 
@@ -2355,21 +2355,6 @@ for (const t of ui.tabs) {
   t.addEventListener("click", () => setView(t.dataset.view));
 }
 
-ui.bracketTourSelect.addEventListener("change", () => {
-  const newDisc = ui.bracketTourSelect.value === "F" ? "F" : "M";
-  if (state.currentBracketEventId !== "overall") {
-    const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
-    const ev = events.find((e) => e.id === state.currentBracketEventId || e.jointEventId === state.currentBracketEventId);
-    if (ev) {
-      state.currentBracketEventId = newDisc === "F" ? ev.jointEventId : ev.id;
-    }
-  }
-  state.currentDiscipline = newDisc;
-  state.currentBracketPage = 1;
-  populateBracketEventSelect();
-  saveBracketSelection({ pushHistory: true });
-  loadBracketLeaderboard();
-});
 ui.bracketLeagueSelect.addEventListener("change", () => {
   state.currentBracketLeagueId = ui.bracketLeagueSelect.value;
   state.currentBracketPage = 1;
