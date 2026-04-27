@@ -206,18 +206,14 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700; color: var(--text);
     background: var(--avatar-bg); overflow: hidden;
-    border: 2px solid var(--panel);
-    box-shadow: 0 0 0 2px var(--tier-color, var(--border));
+    border: 2px solid var(--border);
     user-select: none;
   }
-  .surfer.tier-A { --tier-color: var(--tier-a); }
-  .surfer.tier-B { --tier-color: var(--tier-b); }
-  .surfer.tier-C { --tier-color: var(--tier-c); }
+  .surfer.tier-A .avatar { border-color: var(--tier-a); }
+  .surfer.tier-B .avatar { border-color: var(--tier-b); }
+  .surfer.tier-C .avatar { border-color: var(--tier-c); }
   .surfer .avatar img.avatar-img {
     width: 100%; height: 100%; object-fit: cover; display: block;
-  }
-  .surfer.power .avatar {
-    box-shadow: 0 0 0 2px var(--tier-color, var(--border)), 0 0 0 4px var(--power);
   }
   .surfer .power-badge {
     position: absolute; top: -5px; right: -5px;
@@ -226,27 +222,23 @@
     display: flex; align-items: center; justify-content: center;
     border: 1.5px solid var(--panel); line-height: 1; z-index: 2;
   }
-  .surfer.eliminated .avatar { filter: grayscale(1); opacity: .55; }
-  .surfer .elim-cross {
-    position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(45deg, transparent 46%, var(--warn) 46%, var(--warn) 54%, transparent 54%);
-    border-radius: 50%; opacity: .8;
-  }
-  .surfer.eliminated .pts { color: var(--muted); text-decoration: line-through; }
+  /* Eliminated: red border, slightly dimmed — same as bracket .bp-pick.wrong */
+  .surfer.eliminated .avatar { border-color: var(--warn); opacity: .65; }
+  /* No-score (and not eliminated): grayscale, gray border */
+  .surfer.no-score:not(.eliminated) .avatar { border-color: var(--border); filter: grayscale(1); opacity: .65; }
+  .surfer.eliminated .pts,
+  .surfer.no-score .pts { color: var(--muted); text-decoration: line-through; font-weight: 500; }
   .surfer .pts {
     font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
     font-size: 11px;
   }
   .surfer .tier-dot {
-    position: absolute; bottom: -2px; right: -2px;
-    width: 16px; height: 16px; border-radius: 50%;
-    font-size: 9px; font-weight: 700; color: white;
-    display: flex; align-items: center; justify-content: center;
-    border: 1.5px solid var(--panel); z-index: 2; line-height: 1;
+    position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
+    background: var(--panel); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font-size: 8px; font-weight: 700; padding: 0 5px; line-height: 12px;
+    z-index: 2; letter-spacing: .04em;
   }
-  .surfer .tier-dot.tier-A { background: var(--tier-a); }
-  .surfer .tier-dot.tier-B { background: var(--tier-b); }
-  .surfer .tier-dot.tier-C { background: var(--tier-c); }
   .surfer .country img.flag-img {
     width: 16px; height: 11px; object-fit: cover;
     border-radius: 1px; display: inline-block; vertical-align: middle;
@@ -300,7 +292,6 @@
     box-shadow: 0 0 0 3px var(--tier-color, var(--border));
   }
   .sd-photo img { width: 100%; height: 100%; object-fit: cover; }
-  .sd-photo.power { box-shadow: 0 0 0 3px var(--tier-color, var(--border)), 0 0 0 6px var(--power); }
   .sd-photo.eliminated { filter: grayscale(1); opacity: .6; }
   .sd-info { min-width: 0; flex: 1; }
   .sd-name { font-size: 18px; font-weight: 700; line-height: 1.2; }
@@ -1397,14 +1388,19 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
   const stats = gamedayMap ? gamedayMap.get(id) : null;
   const tierKey = surfer ? TIER_LABEL[surfer.category] : null;
   const country = surfer ? state.countries.get(surfer.country_id) : null;
+
+  const ptsValue = Number.isFinite(stats?.gd_points) ? stats.gd_points : 0;
+  const ptsText = formatPts(ptsValue);
+  const noScore = ptsValue <= 0;
+
   const cls = ["surfer"];
   if (tierKey) cls.push(`tier-${tierKey}`);
   if (isPower) cls.push("power");
   if (isOut) cls.push("eliminated");
+  if (noScore) cls.push("no-score");
 
   const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `#${id}`;
   const countryAbbr = country ? (country.abbr3 || country.abbr2 || "") : "";
-  const ptsText = stats && Number.isFinite(stats.gd_points) ? formatPts(stats.gd_points) : "";
   const breakdown = stats ? formatBreakdownTitle(stats) : "";
   const tooltipParts = [
     fullName,
@@ -1413,8 +1409,8 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
     tierKey ? `Tier ${tierKey}` : "",
     isPower ? "Power surfer" : "",
     isOut ? "Eliminated" : "Active",
-    ptsText ? `${ptsText} pts` : "",
-    breakdown && ptsText ? `(${breakdown})` : "",
+    `${ptsText} pts`,
+    breakdown && !noScore ? `(${breakdown})` : "",
   ].filter(Boolean);
 
   const div = document.createElement("div");
@@ -1436,11 +1432,6 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
     star.textContent = "★";
     avatarWrap.appendChild(star);
   }
-  if (isOut) {
-    const cross = document.createElement("span");
-    cross.className = "elim-cross";
-    avatarWrap.appendChild(cross);
-  }
   if (tierKey) {
     const td = document.createElement("span");
     td.className = `tier-dot tier-${tierKey}`;
@@ -1449,12 +1440,10 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
   }
   div.appendChild(avatarWrap);
 
-  if (ptsText) {
-    const pts = document.createElement("span");
-    pts.className = "pts";
-    pts.textContent = ptsText;
-    div.appendChild(pts);
-  }
+  const pts = document.createElement("span");
+  pts.className = "pts";
+  pts.textContent = ptsText;
+  div.appendChild(pts);
 
   const flag = makeFlag(surfer?.country_id, countryAbbr);
   if (flag) {
