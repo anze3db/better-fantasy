@@ -1,4 +1,4 @@
-const CACHE = "better-fantasy-v1";
+const CACHE = "better-fantasy-v7";
 const SHELL = [
   "/",
   "/index.html",

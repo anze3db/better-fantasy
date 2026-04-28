@@ -209,9 +209,7 @@
     border: 2px solid var(--border);
     user-select: none;
   }
-  .surfer.tier-A .avatar { border-color: var(--tier-a); }
-  .surfer.tier-B .avatar { border-color: var(--tier-b); }
-  .surfer.tier-C .avatar { border-color: var(--tier-c); }
+  .surfer .avatar { border-color: var(--tier-a); }
   .surfer .avatar img.avatar-img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
@@ -228,6 +226,7 @@
   .surfer.no-score:not(.eliminated) .avatar { border-color: var(--border); filter: grayscale(1); opacity: .65; }
   .surfer.eliminated .pts,
   .surfer.no-score .pts { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+  .surfer.prestage .pts { color: var(--muted); font-weight: 500; }
   .surfer .pts {
     font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
     font-size: 11px;
@@ -389,7 +388,8 @@
   }
   .bp-pick.correct { border-color: var(--tier-a); }
   .bp-pick.wrong   { border-color: var(--warn); opacity: .55; }
-  .bp-pick.pending { border-color: var(--border); }
+  .bp-pick.pending { border-color: var(--tier-a); }
+  .bp-pick.placeholder { border-color: var(--border); filter: grayscale(1); opacity: .6; }
   .bp-pick img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .bp-pick .stage-tag {
     position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%);
@@ -715,6 +715,8 @@ const state = {
   token: null,
   userGuid: null,
   bracketToken: null,
+  userTeamId: null,
+  userTeamName: null,
   view: "fantasy",
   leagues: [],
   events: [],
@@ -979,6 +981,10 @@ async function bootstrap() {
     ]);
 
     const privateLeagues = leaguesData?.Value?.league_info ?? [];
+    if (!state.userTeamId) {
+      const tid = privateLeagues.find((l) => l.user_teamid)?.user_teamid;
+      if (tid) state.userTeamId = tid;
+    }
     const publicJoined = (leagueListData?.Value?.data ?? [])
       .filter((l) => l.IsJoined === 1)
       .map((l) => ({
@@ -1067,7 +1073,8 @@ function populateEventSelect() {
     opt.value = String(ev.gameday_id);
     const start = ev.start_date ? new Date(ev.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
     let status = "";
-    if (ev.gd_iscurrent === 1) status = " · live";
+    if (ev.gd_iscurrent === 1 && ev.gd_islocked === 0) status = " · pre-stage";
+    else if (ev.gd_iscurrent === 1) status = " · live";
     else if (ev.gd_iscurrent === 2) status = " · completed";
     else if (ev.gd_islocked === 0) status = " · upcoming";
     opt.textContent = `${ev.event_name}${start ? ` (${start})` : ""}${status}`;
@@ -1100,8 +1107,10 @@ async function loadLeague() {
     return;
   }
 
+  const prestage = isFantasyPrestage(event);
+
   try {
-    await loadSurferFeed(state.currentGamedayId);
+    if (!prestage) await loadSurferFeed(state.currentGamedayId);
     const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
       opt_type: 2,
       page_no: state.currentPage,
@@ -1113,11 +1122,48 @@ async function loadLeague() {
     });
     const rows = ranks?.Value?.data ?? [];
     state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
+    ensureSelfInRows(rows);
     updatePagination();
 
     if (!rows.length) {
       ui.rankingPanel.hidden = false;
       ui.rankingBody.innerHTML = `<tr><td colspan="6" class="empty">No members on this page.</td></tr>`;
+      setStatus("");
+      return;
+    }
+
+    if (prestage) {
+      await loadSurferFeed(state.currentGamedayId).catch(() => null);
+      renderSkeleton(rows);
+      for (const tr of ui.rankingBody.querySelectorAll("tr[data-user-id]")) {
+        tr.cells[2].textContent = "—";
+        tr.cells[3].textContent = "—";
+        tr.cells[4].replaceChildren(renderPrestageGenderCell(event, "M"));
+        tr.cells[5].replaceChildren(renderPrestageGenderCell(event, "F"));
+      }
+      const my = (state.userGuid || "").toLowerCase();
+      const youRow = rows.find((r) => (r.guid || "").toLowerCase() === my);
+      if (youRow && state.userGuid) {
+        try {
+          const team = await apiGet(`/fantasy/services/gameplay/user/${encodeURIComponent(state.userGuid)}/get-team`, {
+            gameday_id: state.currentGamedayId,
+            user_id: 0,
+          });
+          const t = team?.Value?.data ?? team?.Value ?? team;
+          if (t && (t.arr_male_playerid || t.arr_female_playerid || t.team_name)) {
+            renderRow(youRow, t);
+          }
+        } catch (err) {
+          // user hasn't picked yet — placeholders stay
+        }
+      }
+      const banner = document.createElement("tr");
+      banner.className = "prestage-banner";
+      banner.innerHTML = `<td colspan="6" class="empty">
+        <strong>${escape(event.event_name || "Event")}</strong> hasn't started yet. Make or adjust your picks now.
+      </td>`;
+      ui.rankingBody.prepend(banner);
+      ui.rankingPanel.hidden = false;
       setStatus("");
       return;
     }
@@ -1147,6 +1193,37 @@ async function loadLeague() {
   }
 }
 
+function isFantasyPrestage(event) {
+  return !!(event && event.gd_iscurrent === 1 && event.gd_islocked === 0);
+}
+
+function ensureSelfInRows(rows) {
+  const my = (state.userGuid || "").toLowerCase();
+  if (!my) return rows;
+  const youRow = rows.find((r) => (r.guid || "").toLowerCase() === my);
+  if (youRow) {
+    if (youRow.team_name) state.userTeamName = youRow.team_name;
+    if (!state.userTeamId && youRow.user_id) state.userTeamId = youRow.user_id;
+    return rows;
+  }
+  if (state.currentPage !== 1) return rows;
+  const leagueEntry = state.leagues.find((l) => String(l.user_leagueid) === String(state.currentLeagueId));
+  if (!leagueEntry) return rows;
+  rows.push({
+    user_id: state.userTeamId,
+    guid: state.userGuid,
+    rank: leagueEntry.rank ?? null,
+    team_name: state.userTeamName || "Your team",
+    user_name: "",
+    overall_point: leagueEntry.cur_points ?? null,
+  });
+  return rows;
+}
+
+function isBracketEventOpen(ev) {
+  return !!(ev && (ev.status === "open" || ev.jointEventStatus === "open"));
+}
+
 async function loadLeagueOverall() {
   setStatus("Loading season standings…");
   ui.rankingPanel.hidden = true;
@@ -1163,6 +1240,7 @@ async function loadLeagueOverall() {
     });
     const rows = ranks?.Value?.data ?? [];
     state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
+    ensureSelfInRows(rows);
     updatePagination();
     if (!rows.length) {
       ui.rankingPanel.hidden = false;
@@ -1274,8 +1352,9 @@ function renderRow(row, team, errorMsg) {
   const eliminated = new Set(team.gd_eliminated_player || []);
   const powerSurfers = new Set([team.male_captainid, team.female_captainid].filter(Boolean));
   const groups = groupPicksByGender(team.arr_male_playerid || [], team.arr_female_playerid || []);
-  tr.cells[4].replaceChildren(renderGenderCell(groups.M, powerSurfers, eliminated));
-  tr.cells[5].replaceChildren(renderGenderCell(groups.F, powerSurfers, eliminated));
+  const prestage = team.gd_pt == null;
+  tr.cells[4].replaceChildren(renderGenderCell(groups.M, powerSurfers, eliminated, prestage));
+  tr.cells[5].replaceChildren(renderGenderCell(groups.F, powerSurfers, eliminated, prestage));
 }
 
 function renderPtsCell(pts, rank) {
@@ -1361,7 +1440,50 @@ function makeFlag(countryId, fallbackText) {
   return img;
 }
 
-function renderGenderCell(picks, powerSurfers, eliminated) {
+function renderPrestageGenderCell(event, gender) {
+  const wrap = document.createElement("div");
+  wrap.className = "tier-cell";
+  const cats = gender === "M" ? (event?.arr_male_category || []) : (event?.arr_female_category || []);
+  const cnts = gender === "M"
+    ? (event?.arr_male_category_cnt || [])
+    : (event?.arr_femlae_category_cnt || event?.arr_female_category_cnt || []);
+  const slots = [];
+  for (let i = 0; i < cats.length; i++) {
+    for (let j = 0; j < (cnts[i] || 0); j++) slots.push(cats[i]);
+  }
+  if (!slots.length) {
+    wrap.innerHTML = `<span class="muted" style="font-size:11px">—</span>`;
+    return wrap;
+  }
+  const row = document.createElement("div");
+  row.className = "tier-group-row";
+  for (const tier of slots) {
+    const div = document.createElement("div");
+    div.className = `surfer tier-${tier} no-score`;
+    div.style.cursor = "default";
+    div.title = `Tier ${tier} · pick hidden during pre-stage`;
+    const avatarWrap = document.createElement("div");
+    avatarWrap.className = "avatar-wrap";
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "?";
+    avatarWrap.appendChild(avatar);
+    const td = document.createElement("span");
+    td.className = `tier-dot tier-${tier}`;
+    td.textContent = tier;
+    avatarWrap.appendChild(td);
+    div.appendChild(avatarWrap);
+    const pts = document.createElement("span");
+    pts.className = "pts";
+    pts.textContent = "—";
+    div.appendChild(pts);
+    row.appendChild(div);
+  }
+  wrap.appendChild(row);
+  return wrap;
+}
+
+function renderGenderCell(picks, powerSurfers, eliminated, prestage = false) {
   const wrap = document.createElement("div");
   wrap.className = "tier-cell";
   if (!picks.length) {
@@ -1370,18 +1492,20 @@ function renderGenderCell(picks, powerSurfers, eliminated) {
   }
   const totalCount = picks.length;
   const aliveCount = picks.filter((p) => !eliminated.has(p.id)).length;
-  const summary = document.createElement("div");
-  summary.className = "tier-summary";
-  summary.textContent = `${aliveCount} of ${totalCount} active`;
-  wrap.appendChild(summary);
+  if (!prestage) {
+    const summary = document.createElement("div");
+    summary.className = "tier-summary";
+    summary.textContent = `${aliveCount} of ${totalCount} active`;
+    wrap.appendChild(summary);
+  }
   const row = document.createElement("div");
   row.className = "tier-group-row";
-  for (const pick of picks) row.appendChild(makeSurferEl(pick, powerSurfers, eliminated));
+  for (const pick of picks) row.appendChild(makeSurferEl(pick, powerSurfers, eliminated, prestage));
   wrap.appendChild(row);
   return wrap;
 }
 
-function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
+function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated, prestage = false) {
   const gamedayMap = state.surfersByGameday.get(state.currentGamedayId);
   const isOut = eliminated.has(id);
   const isPower = powerSurfers.has(id);
@@ -1390,14 +1514,15 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
   const country = surfer ? state.countries.get(surfer.country_id) : null;
 
   const ptsValue = Number.isFinite(stats?.gd_points) ? stats.gd_points : 0;
-  const ptsText = formatPts(ptsValue);
-  const noScore = ptsValue <= 0;
+  const ptsText = prestage ? "—" : formatPts(ptsValue);
+  const noScore = !prestage && ptsValue <= 0;
 
   const cls = ["surfer"];
   if (tierKey) cls.push(`tier-${tierKey}`);
   if (isPower) cls.push("power");
   if (isOut) cls.push("eliminated");
   if (noScore) cls.push("no-score");
+  if (prestage) cls.push("prestage");
 
   const fullName = surfer ? `${surfer.first_name} ${surfer.last_name}` : `#${id}`;
   const countryAbbr = country ? (country.abbr3 || country.abbr2 || "") : "";
@@ -1408,9 +1533,9 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated) {
     countryAbbr ? `${country.name || countryAbbr}` : "",
     tierKey ? `Tier ${tierKey}` : "",
     isPower ? "Power surfer" : "",
-    isOut ? "Eliminated" : "Active",
-    `${ptsText} pts`,
-    breakdown && !noScore ? `(${breakdown})` : "",
+    prestage ? "Hasn't surfed yet" : (isOut ? "Eliminated" : "Active"),
+    prestage ? "" : `${ptsText} pts`,
+    breakdown && !noScore && !prestage ? `(${breakdown})` : "",
   ].filter(Boolean);
 
   const div = document.createElement("div");
@@ -1910,6 +2035,7 @@ function populateBracketEventSelect() {
     if (ev.status === "completed") status = " · completed";
     else if (ev.status === "locked") status = " · locked";
     else if (ev.status === "live") status = " · live";
+    else if (ev.status === "open") status = " · pre-stage";
     else if (ev.status === "upcoming") status = " · upcoming";
     opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
     ui.bracketEventSelect.appendChild(opt);
@@ -1998,16 +2124,60 @@ async function loadBracketLeaderboard() {
     const slice = all.slice(start, start + BRACKET_PAGE_SIZE);
     state.bracketHasNextPage = start + BRACKET_PAGE_SIZE < Math.min(total, all.length);
     const selfRow = selfData?.response;
+    const ev = !isOverall ? findBracketEvent(eventKey) : null;
+    const prestage = isBracketEventOpen(ev);
     renderBracketLeaderboard(slice, eventKey, selfRow);
+    if (prestage) {
+      const [mensFeed, womensFeed] = await Promise.all([
+        ev?.id ? ensureBracketEventFeed(ev.id).catch(() => null) : null,
+        ev?.jointEventId ? ensureBracketEventFeed(ev.jointEventId).catch(() => null) : null,
+      ]);
+      for (const tr of ui.bracketBody.querySelectorAll("tr[data-user-id]")) {
+        const mCell = tr.querySelector(".bp-cell-m");
+        const fCell = tr.querySelector(".bp-cell-f");
+        const populate = (cell, feed) => {
+          if (!cell) return;
+          cell.innerHTML = "";
+          const block = renderPrestageBracketBlock(feed);
+          if (block) cell.appendChild(block);
+          else cell.innerHTML = `<span class="muted" style="font-size:11px">—</span>`;
+        };
+        populate(mCell, mensFeed);
+        populate(fCell, womensFeed);
+        if (!tr.classList.contains("is-you")) tr.style.cursor = "default";
+      }
+      if (selfRow?.userId) {
+        const [mRes, fRes] = await Promise.all([
+          ev?.id
+            ? bracketGet(`/bracket/services/v1/predictions/${state.currentTournamentId}/${ev.id}/${selfRow.userId}`).catch(() => null)
+            : null,
+          ev?.jointEventId
+            ? bracketGet(`/bracket/services/v1/predictions/${state.currentTournamentId}/${ev.jointEventId}/${selfRow.userId}`).catch(() => null)
+            : null,
+        ]);
+        const mPicks = mRes?.matches ?? mRes?.response?.matches ?? [];
+        const fPicks = fRes?.matches ?? fRes?.response?.matches ?? [];
+        if (mPicks.length || fPicks.length) {
+          const mensCtx = mensFeed ? buildPicksContext(mensFeed) : null;
+          const womensCtx = womensFeed ? buildPicksContext(womensFeed) : null;
+          renderBracketRowPicks(selfRow.userId, { mPicks, mensCtx, fPicks, womensCtx });
+        }
+      }
+      const banner = document.createElement("tr");
+      banner.className = "prestage-banner";
+      banner.innerHTML = `<td colspan="5" class="empty">
+        <strong>${escape(ev?.name || "Event")}</strong> hasn't started yet. Make or adjust your picks now.
+      </td>`;
+      ui.bracketBody.prepend(banner);
+    }
     updateBracketPagination();
     ui.bracketPanel.hidden = false;
     setBracketStatus("");
-    if (!isOverall && slice.length) {
+    if (!isOverall && !prestage && slice.length) {
       const enrich = [...slice];
       if (selfRow && selfRow.userId && !slice.some((r) => r.userId === selfRow.userId)) {
         enrich.unshift(selfRow);
       }
-      const ev = findBracketEvent(eventKey);
       if (ev) enrichBracketRowsWithPicks(enrich, ev.id, ev.jointEventId);
     }
   } catch (err) {
@@ -2025,7 +2195,7 @@ function renderBracketLeaderboard(rows, eventKey, selfRow) {
   }
   // Always pin the "you" row at the top of the page, and skip the duplicate
   // copy from the regular slice if the user is naturally on this page.
-  if (selfRow && selfRow.userId && Number.isFinite(selfRow.rank)) {
+  if (selfRow && selfRow.userId) {
     const tr = makeBracketRow(selfRow, eventKey);
     tr.classList.add("is-you", "self-pinned");
     ui.bracketBody.appendChild(tr);
@@ -2120,6 +2290,32 @@ function renderBracketRowPicks(userId, { mPicks, mensCtx, fPicks, womensCtx }) {
   populate(fCell, fPicks, womensCtx);
 }
 
+function renderPrestageBracketBlock(eventFeed) {
+  if (!eventFeed) return null;
+  const lateStages = (eventFeed.stages || []).filter((s) => /quarter|semi|final/i.test(s.stageName || ""));
+  if (!lateStages.length) return null;
+  const wrap = document.createElement("div");
+  wrap.className = "bp-block";
+  const lateRow = document.createElement("div");
+  lateRow.className = "bp-row";
+  for (const stage of lateStages) {
+    const tag = (stage.stageName || "")
+      .replace(/Quarterfinals/i, "QF")
+      .replace(/Semifinals/i, "SF")
+      .replace(/Final/i, "F");
+    for (const _m of stage.matches || []) {
+      const div = document.createElement("span");
+      div.className = "bp-pick placeholder";
+      div.title = `${stage.stageName} pick · hidden during pre-stage`;
+      div.innerHTML = `<span class="stage-tag">${escape(tag)}</span>`;
+      lateRow.appendChild(div);
+    }
+  }
+  if (!lateRow.children.length) return null;
+  wrap.appendChild(lateRow);
+  return wrap;
+}
+
 function renderPicksBlock(picks, ctx) {
   if (!ctx || !picks || picks.length === 0) return null;
   const { participants, matchIndex, lateStages } = ctx;
@@ -2203,18 +2399,19 @@ async function ensureBracketEventFeed(eventId) {
   return feed;
 }
 
-async function showBracketDetail(userId, userName, eventId) {
+async function showBracketDetail(userId, userName, eventId, opts = {}) {
   const tournamentId = state.currentTournamentId;
   const ev = findBracketEvent(eventId);
   if (!ev) return;
   setBracketStatus("Loading picks…");
+  const seg = opts.isSelf ? "predictions" : "predictions/others";
   try {
     const [mFeed, fFeed, mPicksRes, fPicksRes] = await Promise.all([
       ensureBracketEventFeed(ev.id).catch(() => null),
       ev.jointEventId ? ensureBracketEventFeed(ev.jointEventId).catch(() => null) : null,
-      bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${ev.id}/${userId}`).catch(() => null),
+      bracketGet(`/bracket/services/v1/${seg}/${tournamentId}/${ev.id}/${userId}`).catch(() => null),
       ev.jointEventId
-        ? bracketGet(`/bracket/services/v1/predictions/others/${tournamentId}/${ev.jointEventId}/${userId}`).catch(() => null)
+        ? bracketGet(`/bracket/services/v1/${seg}/${tournamentId}/${ev.jointEventId}/${userId}`).catch(() => null)
         : null,
     ]);
     setBracketStatus("");
@@ -2374,7 +2571,10 @@ ui.bracketBody.addEventListener("click", (e) => {
   if (!tr) return;
   const eventKey = tr.dataset.eventKey;
   if (!eventKey || eventKey === "overall") return;
-  showBracketDetail(tr.dataset.userId, tr.querySelector(".player-name")?.textContent || "", eventKey);
+  const isSelf = tr.classList.contains("is-you");
+  const isOpen = isBracketEventOpen(findBracketEvent(eventKey));
+  if (isOpen && !isSelf) return;
+  showBracketDetail(tr.dataset.userId, tr.querySelector(".player-name")?.textContent || "", eventKey, { isSelf });
 });
 ui.bracketDetail.addEventListener("click", (e) => {
   if (e.target === ui.bracketDetail || (e.target.closest && e.target.closest("[data-close]"))) {
