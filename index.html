@@ -225,7 +225,7 @@
   /* No-score (and not eliminated): grayscale, gray border */
   .surfer.no-score:not(.eliminated) .avatar { border-color: var(--border); filter: grayscale(1); opacity: .65; }
   .surfer.eliminated .pts,
-  .surfer.no-score .pts { color: var(--muted); text-decoration: line-through; font-weight: 500; }
+  .surfer.no-score .pts { color: var(--muted); font-weight: 500; }
   .surfer.prestage .pts { color: var(--muted); font-weight: 500; }
   .surfer .pts {
     font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
@@ -323,7 +323,7 @@
     font-size: 32px; font-weight: 700; color: var(--accent);
     font-variant-numeric: tabular-nums; line-height: 1;
   }
-  .sd-pts-large.eliminated { color: var(--muted); text-decoration: line-through; }
+  .sd-pts-large.eliminated { color: var(--muted); }
   .sd-rounds { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
   .sd-round { background: var(--soft); border-radius: 6px; padding: 8px 6px; text-align: center; }
   .sd-round-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
@@ -1514,8 +1514,8 @@ function makeSurferEl({ id, gender, surfer }, powerSurfers, eliminated, prestage
   const country = surfer ? state.countries.get(surfer.country_id) : null;
 
   const ptsValue = Number.isFinite(stats?.gd_points) ? stats.gd_points : 0;
-  const ptsText = prestage ? "—" : formatPts(ptsValue);
   const noScore = !prestage && ptsValue <= 0;
+  const ptsText = (prestage || noScore) ? "—" : formatPts(ptsValue);
 
   const cls = ["surfer"];
   if (tierKey) cls.push(`tier-${tierKey}`);
@@ -1668,7 +1668,7 @@ function showSurferDetail(athleteId, opts = {}) {
   if (stats && Number.isFinite(stats.gd_points)) {
     const big = document.createElement("div");
     big.className = "sd-pts-large" + (isEliminated ? " eliminated" : "");
-    big.textContent = formatPts(stats.gd_points);
+    big.textContent = stats.gd_points > 0 ? formatPts(stats.gd_points) : "—";
     ptsSection.appendChild(big);
     if (Number.isFinite(stats.selected_percentage)) {
       const sub = document.createElement("div");
