@@ -1,4 +1,4 @@
-const CACHE = "better-fantasy-v7";
+const CACHE = "better-fantasy-v8";
 const SHELL = [
   "/",
   "/index.html",
@@ -28,22 +28,42 @@ self.addEventListener("fetch", (e) => {
 
   const url = new URL(req.url);
 
-  // WSL API + their CDN images: network-only (always live data, never cache).
+  // WSL API: network-only (always live data, never cache).
   if (url.hostname === "gamesapi.worldsurfleague.com") return;
 
-  // App shell: stale-while-revalidate.
-  if (url.origin === self.location.origin) {
+  // Cross-origin: let the browser handle it.
+  if (url.origin !== self.location.origin) return;
+
+  const isHTML = req.mode === "navigate" ||
+    (req.headers.get("accept") || "").includes("text/html");
+
+  if (isHTML) {
+    // Network-first so a fresh deploy lands on the next load.
     e.respondWith(
-      caches.match(req).then((cached) => {
-        const fetchPromise = fetch(req).then((res) => {
-          if (res && res.ok) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || fetchPromise;
-      })
+      fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() =>
+        caches.match(req).then((c) => c || caches.match("/index.html"))
+      )
     );
+    return;
   }
+
+  // Static assets: stale-while-revalidate.
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
+        return res;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })
+  );
 });
