@@ -97,6 +97,26 @@
   header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
   header .right { display: flex; gap: 8px; align-items: center; }
   .tabs { display: flex; gap: 4px; }
+  main > .tabs { margin: 0 0 18px; }
+  .view-tabs {
+    width: 100%;
+    background: var(--soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .view-tabs .tab {
+    flex: 1 1 0; min-width: 0;
+    text-align: center;
+    padding: 8px 12px; font-size: 14px;
+    border-radius: 7px;
+  }
+  .view-tabs .tab[aria-selected="true"] {
+    background: var(--panel); color: var(--text);
+    border-color: var(--border);
+    box-shadow: var(--shadow);
+  }
   .tab {
     background: transparent; border: 1px solid transparent; border-radius: 8px;
     padding: 6px 14px; font: inherit; font-size: 13px; color: var(--muted);
@@ -541,10 +561,6 @@
 
 <header>
   <h1>Better Fantasy</h1>
-  <nav class="tabs" role="tablist">
-    <button class="tab" data-view="fantasy" role="tab">Fantasy</button>
-    <button class="tab" data-view="brackets" role="tab">Brackets</button>
-  </nav>
   <div class="right">
     <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -565,15 +581,20 @@
 </header>
 
 <main>
+  <nav class="tabs view-tabs" role="tablist">
+    <button class="tab" data-view="fantasy" role="tab">Fantasy</button>
+    <button class="tab" data-view="brackets" role="tab">Bracket</button>
+  </nav>
+
   <div class="view view-fantasy">
   <div class="panel controls" id="controls" hidden>
     <div class="field">
-      <label for="league-select">League</label>
-      <select id="league-select"></select>
-    </div>
-    <div class="field">
       <label for="event-select">Event</label>
       <select id="event-select"></select>
+    </div>
+    <div class="field">
+      <label for="league-select">League</label>
+      <select id="league-select"></select>
     </div>
     <button id="refresh">Refresh</button>
   </div>
@@ -605,12 +626,12 @@
   <div class="view view-brackets" hidden>
     <div class="panel controls" id="bracket-controls" hidden>
       <div class="field">
-        <label for="bracket-league-select">League</label>
-        <select id="bracket-league-select"></select>
-      </div>
-      <div class="field">
         <label for="bracket-event-select">Event</label>
         <select id="bracket-event-select"></select>
+      </div>
+      <div class="field">
+        <label for="bracket-league-select">League</label>
+        <select id="bracket-league-select"></select>
       </div>
       <button id="bracket-refresh">Refresh</button>
     </div>
@@ -1062,6 +1083,28 @@ function populateLeagueSelect() {
     ui.leagueSelect.appendChild(opt);
   }
 }
+function eventNameKey(name) {
+  return (name || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+// Cross-mode lookups by event name.
+function fantasyEventForBracketId(bracketId) {
+  if (!bracketId || bracketId === "overall") return null;
+  const bEvents = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  const b = bEvents.find((e) => e.id === bracketId || e.jointEventId === bracketId);
+  if (!b) return null;
+  const key = eventNameKey(b.name);
+  return (state.events || []).find((f) => eventNameKey(f.event_name) === key) || null;
+}
+function bracketEventForFantasyId(fantasyId) {
+  if (!fantasyId || fantasyId === "overall") return null;
+  const f = (state.events || []).find((e) => e.gameday_id === fantasyId);
+  if (!f) return null;
+  const key = eventNameKey(f.event_name);
+  const bEvents = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  return bEvents.find((b) => eventNameKey(b.name) === key) || null;
+}
+
 function populateEventSelect() {
   ui.eventSelect.innerHTML = "";
   const overall = document.createElement("option");
@@ -1080,6 +1123,30 @@ function populateEventSelect() {
     opt.textContent = `${ev.event_name}${start ? ` (${start})` : ""}${status}`;
     ui.eventSelect.appendChild(opt);
   }
+  ui.eventSelect.value = state.currentGamedayId != null ? String(state.currentGamedayId) : "overall";
+}
+
+function populateBracketEventSelect() {
+  ui.bracketEventSelect.innerHTML = "";
+  const overall = document.createElement("option");
+  overall.value = "overall";
+  overall.textContent = "Season — overall";
+  ui.bracketEventSelect.appendChild(overall);
+  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
+  for (const ev of events) {
+    const opt = document.createElement("option");
+    opt.value = ev.id;
+    const start = ev.startAt ? new Date(ev.startAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
+    let status = "";
+    if (ev.status === "completed") status = " · completed";
+    else if (ev.status === "locked") status = " · locked";
+    else if (ev.status === "live") status = " · live";
+    else if (ev.status === "open") status = " · pre-stage";
+    else if (ev.status === "upcoming") status = " · upcoming";
+    opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
+    ui.bracketEventSelect.appendChild(opt);
+  }
+  ui.bracketEventSelect.value = state.currentBracketEventId || "overall";
 }
 
 // ------- league load -------
@@ -1830,7 +1897,16 @@ ui.eventSelect.addEventListener("change", () => {
   const v = ui.eventSelect.value;
   state.currentGamedayId = v === "overall" ? "overall" : Number(v);
   state.currentPage = 1;
+  // Mirror to bracket by event name.
+  const bMatch = bracketEventForFantasyId(state.currentGamedayId);
+  state.currentBracketEventId = bMatch ? bMatch.id : "overall";
+  state.currentBracketPage = 1;
+  if (ui.bracketEventSelect && ui.bracketEventSelect.options.length) {
+    ui.bracketEventSelect.value = state.currentBracketEventId;
+  }
   saveSelection({ pushHistory: true });
+  saveBracketSelection();
+  state.bracketDirty = true;
   loadLeague();
 });
 ui.prevPage.addEventListener("click", () => {
@@ -1920,7 +1996,9 @@ window.addEventListener("popstate", () => {
   const bEvent = params.get("bevent");
   if (bEvent && bEvent !== state.currentBracketEventId) {
     state.currentBracketEventId = bEvent;
-    if (ui.bracketEventSelect) ui.bracketEventSelect.value = bEvent;
+    if (ui.bracketEventSelect && ui.bracketEventSelect.options.length) {
+      ui.bracketEventSelect.value = bEvent;
+    }
     bracketChanged = true;
   }
   const bPage = Number(params.get("bpage")) || 1;
@@ -2019,34 +2097,22 @@ function populateBracketLeagueSelect() {
   }
 }
 
-function populateBracketEventSelect() {
-  ui.bracketEventSelect.innerHTML = "";
-  const overall = document.createElement("option");
-  overall.value = "overall";
-  overall.textContent = "Season — overall";
-  ui.bracketEventSelect.appendChild(overall);
-  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
-  for (const ev of events) {
-    const opt = document.createElement("option");
-    // Always use the men's eventId as the canonical option value.
-    opt.value = ev.id;
-    const start = ev.startAt ? new Date(ev.startAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-    let status = "";
-    if (ev.status === "completed") status = " · completed";
-    else if (ev.status === "locked") status = " · locked";
-    else if (ev.status === "live") status = " · live";
-    else if (ev.status === "open") status = " · pre-stage";
-    else if (ev.status === "upcoming") status = " · upcoming";
-    opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
-    ui.bracketEventSelect.appendChild(opt);
-  }
+function migrateBracketEventId() {
   // Migrate any previously-stored women's jointEventId to the canonical men's id.
   const cur = state.currentBracketEventId;
   if (cur && cur !== "overall") {
     const ev = findBracketEvent(cur);
     if (ev) state.currentBracketEventId = ev.id;
   }
-  ui.bracketEventSelect.value = state.currentBracketEventId || "overall";
+}
+
+// When bracket data finally loads, align bracket event with the fantasy event
+// (if the user picked one before bracket bootstrap completed).
+function alignBracketToFantasyEvent() {
+  if (state.currentBracketEventId && state.currentBracketEventId !== "overall") return;
+  if (!state.currentGamedayId || state.currentGamedayId === "overall") return;
+  const bMatch = bracketEventForFantasyId(state.currentGamedayId);
+  if (bMatch) state.currentBracketEventId = bMatch.id;
 }
 
 async function ensureBracketTournament(tournamentId) {
@@ -2084,6 +2150,8 @@ async function bootstrapBrackets() {
       ensureBracketLeagues(state.currentTournamentId),
     ]);
     populateBracketLeagueSelect();
+    migrateBracketEventId();
+    alignBracketToFantasyEvent();
     populateBracketEventSelect();
     if (state.currentBracketLeagueId) ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
     if (state.currentBracketEventId) ui.bracketEventSelect.value = String(state.currentBracketEventId);
@@ -2532,8 +2600,16 @@ function setView(view) {
   if (state.view === "brackets") params.set("view", "brackets");
   else params.delete("view");
   history.replaceState(null, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
-  if (state.view === "brackets" && !state.bracketEventsByTournament.has(state.currentTournamentId)) {
-    bootstrapBrackets();
+  if (state.view === "brackets") {
+    if (!state.bracketEventsByTournament.has(state.currentTournamentId)) {
+      bootstrapBrackets();
+    } else if (state.bracketDirty) {
+      state.bracketDirty = false;
+      loadBracketLeaderboard();
+    }
+  } else if (state.fantasyDirty && state.currentLeagueId && state.currentGamedayId) {
+    state.fantasyDirty = false;
+    loadLeague();
   }
 }
 
@@ -2550,7 +2626,16 @@ ui.bracketLeagueSelect.addEventListener("change", () => {
 ui.bracketEventSelect.addEventListener("change", () => {
   state.currentBracketEventId = ui.bracketEventSelect.value;
   state.currentBracketPage = 1;
+  // Mirror to fantasy by event name.
+  const fMatch = fantasyEventForBracketId(state.currentBracketEventId);
+  state.currentGamedayId = fMatch ? fMatch.gameday_id : "overall";
+  state.currentPage = 1;
+  if (ui.eventSelect && ui.eventSelect.options.length) {
+    ui.eventSelect.value = String(state.currentGamedayId);
+  }
   saveBracketSelection({ pushHistory: true });
+  saveSelection();
+  state.fantasyDirty = true;
   loadBracketLeaderboard();
 });
 ui.bracketRefresh.addEventListener("click", () => loadBracketLeaderboard());
