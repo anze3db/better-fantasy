@@ -117,13 +117,14 @@
   }
   .event-strip-arrow:hover { background: var(--soft); color: var(--text); }
   .event-strip-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .league-strip { display: flex; align-items: stretch; gap: 6px; margin-bottom: 14px; }
+  .league-strip[hidden] { display: none; }
   .league-strip-track {
-    display: flex; gap: 8px; overflow-x: auto;
+    display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0;
     scroll-behavior: smooth; scroll-snap-type: x proximity;
-    padding: 2px 2px 6px; margin-bottom: 14px;
+    padding: 2px 2px 6px;
     scrollbar-width: thin;
   }
-  .league-strip-track[hidden] { display: none; }
   .league-strip-track::-webkit-scrollbar { height: 6px; }
   .league-strip-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
   .league-card {
@@ -690,7 +691,11 @@
   </nav>
 
   <div class="view view-fantasy">
-  <div class="league-strip-track" id="league-strip-track" role="tablist" hidden></div>
+  <div class="league-strip" id="league-strip" hidden>
+    <button class="event-strip-arrow" id="league-strip-left" aria-label="Scroll leagues left" type="button">‹</button>
+    <div class="league-strip-track" id="league-strip-track" role="tablist"></div>
+    <button class="event-strip-arrow" id="league-strip-right" aria-label="Scroll leagues right" type="button">›</button>
+  </div>
 
   <div id="status" class="status"></div>
 
@@ -717,7 +722,11 @@
   </div>
 
   <div class="view view-brackets" hidden>
-    <div class="league-strip-track" id="bracket-league-strip-track" role="tablist" hidden></div>
+    <div class="league-strip" id="bracket-league-strip" hidden>
+      <button class="event-strip-arrow" id="bracket-league-strip-left" aria-label="Scroll leagues left" type="button">‹</button>
+      <div class="league-strip-track" id="bracket-league-strip-track" role="tablist"></div>
+      <button class="event-strip-arrow" id="bracket-league-strip-right" aria-label="Scroll leagues right" type="button">›</button>
+    </div>
 
     <div id="bracket-status" class="status"></div>
 
@@ -862,7 +871,10 @@ function ingestHashCredentials() {
 ingestHashCredentials();
 
 const ui = {
+  leagueStrip: $("#league-strip"),
   leagueStripTrack: $("#league-strip-track"),
+  leagueStripLeft: $("#league-strip-left"),
+  leagueStripRight: $("#league-strip-right"),
   eventStrip: $("#event-strip"),
   eventStripTrack: $("#event-strip-track"),
   eventStripLeft: $("#event-strip-left"),
@@ -892,7 +904,10 @@ const ui = {
   tabs: document.querySelectorAll(".tab"),
   viewFantasy: document.querySelector(".view-fantasy"),
   viewBrackets: document.querySelector(".view-brackets"),
+  bracketLeagueStrip: $("#bracket-league-strip"),
   bracketLeagueStripTrack: $("#bracket-league-strip-track"),
+  bracketLeagueStripLeft: $("#bracket-league-strip-left"),
+  bracketLeagueStripRight: $("#bracket-league-strip-right"),
   bracketStatus: $("#bracket-status"),
   bracketPanel: $("#bracket-panel"),
   bracketBody: $("#bracket-ranking tbody"),
@@ -1197,15 +1212,32 @@ function renderLeagueStrip() {
       selected: lg.user_leagueid === state.currentLeagueId,
     }));
   }
-  track.hidden = false;
+  ui.leagueStrip.hidden = false;
   const sel = track.querySelector(".league-card.is-selected");
   if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+  updateLeagueArrowState();
 }
 
 function setSelectedLeagueCard(track, leagueId) {
   for (const c of track.querySelectorAll(".league-card")) {
     c.classList.toggle("is-selected", c.dataset.leagueId === String(leagueId));
   }
+}
+
+function updateLeagueArrowState() {
+  const t = ui.leagueStripTrack;
+  const atStart = t.scrollLeft <= 0;
+  const atEnd = t.scrollLeft + t.clientWidth >= t.scrollWidth - 1;
+  ui.leagueStripLeft.disabled = atStart;
+  ui.leagueStripRight.disabled = atEnd;
+}
+
+function updateBracketLeagueArrowState() {
+  const t = ui.bracketLeagueStripTrack;
+  const atStart = t.scrollLeft <= 0;
+  const atEnd = t.scrollLeft + t.clientWidth >= t.scrollWidth - 1;
+  ui.bracketLeagueStripLeft.disabled = atStart;
+  ui.bracketLeagueStripRight.disabled = atEnd;
 }
 function eventNameKey(name) {
   return (name || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -2063,6 +2095,13 @@ ui.leagueStripTrack.addEventListener("click", (e) => {
   saveSelection({ pushHistory: true });
   loadLeague();
 });
+ui.leagueStripLeft.addEventListener("click", () => {
+  ui.leagueStripTrack.scrollBy({ left: -260, behavior: "smooth" });
+});
+ui.leagueStripRight.addEventListener("click", () => {
+  ui.leagueStripTrack.scrollBy({ left: 260, behavior: "smooth" });
+});
+ui.leagueStripTrack.addEventListener("scroll", updateLeagueArrowState, { passive: true });
 ui.eventStripTrack.addEventListener("click", (e) => {
   const card = e.target.closest(".event-card");
   if (!card) return;
@@ -2091,7 +2130,11 @@ ui.eventStripRight.addEventListener("click", () => {
   ui.eventStripTrack.scrollBy({ left: 240, behavior: "smooth" });
 });
 ui.eventStripTrack.addEventListener("scroll", updateStripArrowState, { passive: true });
-window.addEventListener("resize", updateStripArrowState);
+window.addEventListener("resize", () => {
+  updateStripArrowState();
+  if (!ui.leagueStrip.hidden) updateLeagueArrowState();
+  if (!ui.bracketLeagueStrip.hidden) updateBracketLeagueArrowState();
+});
 ui.prevPage.addEventListener("click", () => {
   if (state.currentPage <= 1) return;
   state.currentPage -= 1;
@@ -2277,9 +2320,10 @@ function renderBracketLeagueStrip() {
       selected: String(l.leagueId) === String(state.currentBracketLeagueId),
     }));
   }
-  track.hidden = false;
+  ui.bracketLeagueStrip.hidden = false;
   const sel = track.querySelector(".league-card.is-selected");
   if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+  updateBracketLeagueArrowState();
 }
 
 function migrateBracketEventId() {
@@ -2809,6 +2853,13 @@ ui.bracketLeagueStripTrack.addEventListener("click", (e) => {
   saveBracketSelection({ pushHistory: true });
   loadBracketLeaderboard();
 });
+ui.bracketLeagueStripLeft.addEventListener("click", () => {
+  ui.bracketLeagueStripTrack.scrollBy({ left: -260, behavior: "smooth" });
+});
+ui.bracketLeagueStripRight.addEventListener("click", () => {
+  ui.bracketLeagueStripTrack.scrollBy({ left: 260, behavior: "smooth" });
+});
+ui.bracketLeagueStripTrack.addEventListener("scroll", updateBracketLeagueArrowState, { passive: true });
 ui.bracketPrev.addEventListener("click", () => {
   if (state.currentBracketPage <= 1) return;
   state.currentBracketPage -= 1;
