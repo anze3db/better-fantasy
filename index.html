@@ -91,11 +91,109 @@
     font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
   header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 22px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 22px; background: var(--panel); border-bottom: 1px solid var(--border);
   }
-  header h1 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -.01em; }
-  header .right { display: flex; gap: 8px; align-items: center; }
+  header h1 {
+    margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  header .right { display: flex; gap: 8px; align-items: center; flex: 0 0 auto; margin-left: auto; }
+  .event-strip { display: flex; align-items: stretch; gap: 6px; flex: 1 1 auto; min-width: 0; }
+  .event-strip[hidden] { display: none; }
+  .event-strip-track {
+    display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0;
+    scroll-behavior: smooth; scroll-snap-type: x proximity;
+    padding: 2px 2px 6px; margin-bottom: -4px;
+    scrollbar-width: thin;
+  }
+  .event-strip-track::-webkit-scrollbar { height: 6px; }
+  .event-strip-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  .event-strip-arrow {
+    flex: 0 0 22px; padding: 0; align-self: center; height: 60px;
+    background: transparent; border: none; border-radius: 6px;
+    color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .event-strip-arrow:hover { background: var(--soft); color: var(--text); }
+  .event-strip-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+  .league-strip-track {
+    display: flex; gap: 8px; overflow-x: auto;
+    scroll-behavior: smooth; scroll-snap-type: x proximity;
+    padding: 2px 2px 6px; margin-bottom: 14px;
+    scrollbar-width: thin;
+  }
+  .league-strip-track[hidden] { display: none; }
+  .league-strip-track::-webkit-scrollbar { height: 6px; }
+  .league-strip-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  .league-card {
+    flex: 0 0 240px; max-width: 240px; min-width: 0;
+    scroll-snap-align: start;
+    background: var(--soft); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; cursor: pointer; font: inherit; text-align: left;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .league-card:hover { background: var(--panel); }
+  .league-card.is-selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  }
+  .league-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .league-name {
+    font-size: 13px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .league-meta {
+    font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; gap: 4px; align-items: center;
+  }
+  .league-badge {
+    display: inline-block; font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .04em;
+    background: var(--panel); color: var(--muted); border: 1px solid var(--border);
+  }
+  .league-badge.admin { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
+  .event-card {
+    flex: 0 0 220px; max-width: 220px; min-width: 0;
+    scroll-snap-align: start;
+    background: var(--soft); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; cursor: pointer; font: inherit; text-align: left;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .event-card:hover { background: var(--panel); }
+  .event-card.is-selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  }
+  .event-card .ec-meta {
+    font-size: 11px; color: var(--muted);
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap; overflow: hidden;
+  }
+  .event-card .ec-name {
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .event-card .ec-place {
+    font-size: 11px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .event-card .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--warn) 28%, transparent);
+    animation: ec-live-pulse 1.6s ease-in-out infinite;
+  }
+  .event-card .ec-live { color: var(--warn); font-weight: 700; letter-spacing: .04em; }
+  @keyframes ec-live-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--warn) 28%, transparent); }
+    50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--warn) 0%, transparent); }
+  }
   .tabs { display: flex; gap: 4px; }
   main > .tabs { margin: 0 0 18px; }
   .view-tabs {
@@ -457,8 +555,8 @@
       padding-bottom: env(safe-area-inset-bottom);
       margin: 14px auto;
     }
-    header { padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 12px max(14px, env(safe-area-inset-left)); }
-    header h1 { font-size: 15px; }
+    header { padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left)); gap: 8px; }
+    header h1 { display: none; }
     .controls { padding: 10px; gap: 8px; }
     .field select, .field input { min-width: 0; width: 100%; }
     .field { flex: 1 1 140px; }
@@ -561,6 +659,11 @@
 
 <header>
   <h1>Better Fantasy</h1>
+  <div class="event-strip" id="event-strip" hidden>
+    <button class="event-strip-arrow" id="event-strip-left" aria-label="Scroll events left" type="button">‹</button>
+    <div class="event-strip-track" id="event-strip-track" role="tablist"></div>
+    <button class="event-strip-arrow" id="event-strip-right" aria-label="Scroll events right" type="button">›</button>
+  </div>
   <div class="right">
     <button id="theme-toggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -587,17 +690,7 @@
   </nav>
 
   <div class="view view-fantasy">
-  <div class="panel controls" id="controls" hidden>
-    <div class="field">
-      <label for="event-select">Event</label>
-      <select id="event-select"></select>
-    </div>
-    <div class="field">
-      <label for="league-select">League</label>
-      <select id="league-select"></select>
-    </div>
-    <button id="refresh">Refresh</button>
-  </div>
+  <div class="league-strip-track" id="league-strip-track" role="tablist" hidden></div>
 
   <div id="status" class="status"></div>
 
@@ -624,17 +717,7 @@
   </div>
 
   <div class="view view-brackets" hidden>
-    <div class="panel controls" id="bracket-controls" hidden>
-      <div class="field">
-        <label for="bracket-event-select">Event</label>
-        <select id="bracket-event-select"></select>
-      </div>
-      <div class="field">
-        <label for="bracket-league-select">League</label>
-        <select id="bracket-league-select"></select>
-      </div>
-      <button id="bracket-refresh">Refresh</button>
-    </div>
+    <div class="league-strip-track" id="bracket-league-strip-track" role="tablist" hidden></div>
 
     <div id="bracket-status" class="status"></div>
 
@@ -779,9 +862,11 @@ function ingestHashCredentials() {
 ingestHashCredentials();
 
 const ui = {
-  controls: $("#controls"),
-  leagueSelect: $("#league-select"),
-  eventSelect: $("#event-select"),
+  leagueStripTrack: $("#league-strip-track"),
+  eventStrip: $("#event-strip"),
+  eventStripTrack: $("#event-strip-track"),
+  eventStripLeft: $("#event-strip-left"),
+  eventStripRight: $("#event-strip-right"),
   refresh: $("#refresh"),
   status: $("#status"),
   rankingPanel: $("#ranking-panel"),
@@ -807,10 +892,7 @@ const ui = {
   tabs: document.querySelectorAll(".tab"),
   viewFantasy: document.querySelector(".view-fantasy"),
   viewBrackets: document.querySelector(".view-brackets"),
-  bracketControls: $("#bracket-controls"),
-  bracketLeagueSelect: $("#bracket-league-select"),
-  bracketEventSelect: $("#bracket-event-select"),
-  bracketRefresh: $("#bracket-refresh"),
+  bracketLeagueStripTrack: $("#bracket-league-strip-track"),
   bracketStatus: $("#bracket-status"),
   bracketPanel: $("#bracket-panel"),
   bracketBody: $("#bracket-ranking tbody"),
@@ -1026,10 +1108,6 @@ async function bootstrap() {
     const imgVer = translations?.Value?.imgVer;
     if (imgVer != null) IMG_VER = String(imgVer);
 
-    populateLeagueSelect();
-    populateEventSelect();
-    ui.controls.hidden = false;
-
     if (state.leagues.length && state.events.length) {
       const saved = loadSelection();
       const savedLeague = saved.leagueId && state.leagues.find((l) => l.user_leagueid === saved.leagueId);
@@ -1041,8 +1119,8 @@ async function bootstrap() {
         ?? state.events[0];
       state.currentGamedayId = currentEvent.gameday_id;
       state.currentPage = saved.page || 1;
-      ui.leagueSelect.value = String(state.currentLeagueId);
-      ui.eventSelect.value = String(state.currentGamedayId);
+      renderLeagueStrip();
+      renderEventStrip();
       saveSelection();
       await loadLeague();
     } else {
@@ -1073,14 +1151,60 @@ async function loadSurferFeed(gamedayId) {
   return map;
 }
 
-function populateLeagueSelect() {
-  ui.leagueSelect.innerHTML = "";
+function formatMemberCount(n) {
+  if (!Number.isFinite(n)) return "";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
+function buildLeagueCard({ id, name, members, rank, isAdmin, isPrivate, selected }) {
+  const card = document.createElement("button");
+  card.type = "button";
+  card.className = "league-card";
+  card.dataset.leagueId = String(id);
+  if (selected) card.classList.add("is-selected");
+
+  const meta = [];
+  if (Number.isFinite(rank) && rank > 0) {
+    meta.push(`<span>#${rank.toLocaleString()}${members ? ` of ${escape(formatMemberCount(members))}` : ""}</span>`);
+  } else if (members) {
+    meta.push(`<span>${escape(formatMemberCount(members))} members</span>`);
+  }
+  if (isAdmin) meta.push(`<span class="league-badge admin">Admin</span>`);
+  if (isPrivate) meta.push(`<span class="league-badge">Private</span>`);
+
+  card.innerHTML = `
+    <div class="league-info">
+      <div class="league-name">${escape(name || "League")}</div>
+      <div class="league-meta">${meta.join("")}</div>
+    </div>
+  `;
+  return card;
+}
+
+function renderLeagueStrip() {
+  const track = ui.leagueStripTrack;
+  track.innerHTML = "";
   for (const lg of state.leagues) {
-    const opt = document.createElement("option");
-    opt.value = String(lg.user_leagueid);
-    const visibility = lg.is_public ? "public" : "private";
-    opt.textContent = `${lg.league_name} · ${lg.total_member} members · ${visibility}`;
-    ui.leagueSelect.appendChild(opt);
+    track.appendChild(buildLeagueCard({
+      id: lg.user_leagueid,
+      name: lg.league_name,
+      members: lg.total_member,
+      rank: lg.rank,
+      isAdmin: !!lg.is_admin,
+      isPrivate: !lg.is_public,
+      selected: lg.user_leagueid === state.currentLeagueId,
+    }));
+  }
+  track.hidden = false;
+  const sel = track.querySelector(".league-card.is-selected");
+  if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+}
+
+function setSelectedLeagueCard(track, leagueId) {
+  for (const c of track.querySelectorAll(".league-card")) {
+    c.classList.toggle("is-selected", c.dataset.leagueId === String(leagueId));
   }
 }
 function eventNameKey(name) {
@@ -1105,48 +1229,89 @@ function bracketEventForFantasyId(fantasyId) {
   return bEvents.find((b) => eventNameKey(b.name) === key) || null;
 }
 
-function populateEventSelect() {
-  ui.eventSelect.innerHTML = "";
-  const overall = document.createElement("option");
-  overall.value = "overall";
-  overall.textContent = "Season — overall";
-  ui.eventSelect.appendChild(overall);
-  for (const ev of state.events) {
-    const opt = document.createElement("option");
-    opt.value = String(ev.gameday_id);
-    const start = ev.start_date ? new Date(ev.start_date).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-    let status = "";
-    if (ev.gd_iscurrent === 1 && ev.gd_islocked === 0) status = " · pre-stage";
-    else if (ev.gd_iscurrent === 1) status = " · live";
-    else if (ev.gd_iscurrent === 2) status = " · completed";
-    else if (ev.gd_islocked === 0) status = " · upcoming";
-    opt.textContent = `${ev.event_name}${start ? ` (${start})` : ""}${status}`;
-    ui.eventSelect.appendChild(opt);
-  }
-  ui.eventSelect.value = state.currentGamedayId != null ? String(state.currentGamedayId) : "overall";
+function flagEmoji(abbr2) {
+  if (!abbr2 || abbr2.length !== 2) return "";
+  const base = 0x1F1E6 - 65;
+  const a = abbr2.toUpperCase();
+  return String.fromCodePoint(base + a.charCodeAt(0), base + a.charCodeAt(1));
 }
 
-function populateBracketEventSelect() {
-  ui.bracketEventSelect.innerHTML = "";
-  const overall = document.createElement("option");
-  overall.value = "overall";
-  overall.textContent = "Season — overall";
-  ui.bracketEventSelect.appendChild(overall);
-  const events = state.bracketEventsByTournament.get(state.currentTournamentId) || [];
-  for (const ev of events) {
-    const opt = document.createElement("option");
-    opt.value = ev.id;
-    const start = ev.startAt ? new Date(ev.startAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "";
-    let status = "";
-    if (ev.status === "completed") status = " · completed";
-    else if (ev.status === "locked") status = " · locked";
-    else if (ev.status === "live") status = " · live";
-    else if (ev.status === "open") status = " · pre-stage";
-    else if (ev.status === "upcoming") status = " · upcoming";
-    opt.textContent = `${ev.name}${start ? ` (${start})` : ""}${status}`;
-    ui.bracketEventSelect.appendChild(opt);
+function formatEventDateRange(startISO, endISO) {
+  if (!startISO) return "";
+  const s = new Date(startISO);
+  if (!endISO) return s.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const e = new Date(endISO);
+  if (s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()) {
+    const month = s.toLocaleDateString(undefined, { month: "short" });
+    return `${month} ${s.getDate()} - ${e.getDate()}`;
   }
-  ui.bracketEventSelect.value = state.currentBracketEventId || "overall";
+  const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return `${fmt(s)} - ${fmt(e)}`;
+}
+
+function renderEventStrip() {
+  const track = ui.eventStripTrack;
+  track.innerHTML = "";
+
+  const overall = document.createElement("button");
+  overall.type = "button";
+  overall.className = "event-card event-card-overall";
+  overall.dataset.gamedayId = "overall";
+  if (state.currentGamedayId === "overall") overall.classList.add("is-selected");
+  overall.innerHTML = `
+    <div class="ec-meta"><span>Season</span></div>
+    <div class="ec-name">Overall</div>
+    <div class="ec-place">All events</div>
+  `;
+  track.appendChild(overall);
+
+  for (const ev of state.events) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "event-card";
+    card.dataset.gamedayId = String(ev.gameday_id);
+    if (state.currentGamedayId === ev.gameday_id) card.classList.add("is-selected");
+
+    const country = state.countries.get(ev.country_id);
+    const flag = country ? flagEmoji(country.abbr2) : "";
+    const place = ev.place || (country ? country.name : "");
+    const dateRange = formatEventDateRange(ev.start_date, ev.end_date);
+    const eventNum = `Event ${String(ev.event_id).padStart(2, "0")}`;
+    const isLive = ev.gd_iscurrent === 1;
+
+    const meta = [];
+    if (dateRange) meta.push(`<span>${escape(dateRange)}</span>`);
+    meta.push(`<span>·</span><span>${escape(eventNum)}</span>`);
+    if (isLive) meta.push(`<span class="live-dot" aria-hidden="true"></span><span class="ec-live">LIVE</span>`);
+
+    card.innerHTML = `
+      <div class="ec-meta">${meta.join("")}</div>
+      <div class="ec-name">${escape(ev.event_name || "")}</div>
+      <div class="ec-place">${flag ? `${flag} ` : ""}${escape(place)}</div>
+    `;
+    track.appendChild(card);
+  }
+
+  ui.eventStrip.hidden = false;
+  // Centre the selected card.
+  const sel = track.querySelector(".event-card.is-selected");
+  if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+  updateStripArrowState();
+}
+
+function updateStripArrowState() {
+  const t = ui.eventStripTrack;
+  const atStart = t.scrollLeft <= 0;
+  const atEnd = t.scrollLeft + t.clientWidth >= t.scrollWidth - 1;
+  ui.eventStripLeft.disabled = atStart;
+  ui.eventStripRight.disabled = atEnd;
+}
+
+function setSelectedCard(gamedayId) {
+  for (const c of ui.eventStripTrack.querySelectorAll(".event-card")) {
+    const matches = c.dataset.gamedayId === String(gamedayId);
+    c.classList.toggle("is-selected", matches);
+  }
 }
 
 // ------- league load -------
@@ -1887,28 +2052,46 @@ ui.settingsForm.addEventListener("submit", (e) => {
   }
 });
 
-ui.leagueSelect.addEventListener("change", () => {
-  state.currentLeagueId = Number(ui.leagueSelect.value);
+ui.leagueStripTrack.addEventListener("click", (e) => {
+  const card = e.target.closest(".league-card");
+  if (!card) return;
+  const id = Number(card.dataset.leagueId);
+  if (!Number.isFinite(id) || id === state.currentLeagueId) return;
+  state.currentLeagueId = id;
   state.currentPage = 1;
+  setSelectedLeagueCard(ui.leagueStripTrack, id);
   saveSelection({ pushHistory: true });
   loadLeague();
 });
-ui.eventSelect.addEventListener("change", () => {
-  const v = ui.eventSelect.value;
-  state.currentGamedayId = v === "overall" ? "overall" : Number(v);
+ui.eventStripTrack.addEventListener("click", (e) => {
+  const card = e.target.closest(".event-card");
+  if (!card) return;
+  const gid = card.dataset.gamedayId;
+  state.currentGamedayId = gid === "overall" ? "overall" : Number(gid);
   state.currentPage = 1;
   // Mirror to bracket by event name.
   const bMatch = bracketEventForFantasyId(state.currentGamedayId);
   state.currentBracketEventId = bMatch ? bMatch.id : "overall";
   state.currentBracketPage = 1;
-  if (ui.bracketEventSelect && ui.bracketEventSelect.options.length) {
-    ui.bracketEventSelect.value = state.currentBracketEventId;
-  }
+  setSelectedCard(state.currentGamedayId);
   saveSelection({ pushHistory: true });
   saveBracketSelection();
-  state.bracketDirty = true;
-  loadLeague();
+  if (state.view === "brackets") {
+    state.fantasyDirty = true;
+    loadBracketLeaderboard();
+  } else {
+    state.bracketDirty = true;
+    loadLeague();
+  }
 });
+ui.eventStripLeft.addEventListener("click", () => {
+  ui.eventStripTrack.scrollBy({ left: -240, behavior: "smooth" });
+});
+ui.eventStripRight.addEventListener("click", () => {
+  ui.eventStripTrack.scrollBy({ left: 240, behavior: "smooth" });
+});
+ui.eventStripTrack.addEventListener("scroll", updateStripArrowState, { passive: true });
+window.addEventListener("resize", updateStripArrowState);
 ui.prevPage.addEventListener("click", () => {
   if (state.currentPage <= 1) return;
   state.currentPage -= 1;
@@ -1968,13 +2151,13 @@ window.addEventListener("popstate", () => {
   if (sel.leagueId && sel.leagueId !== state.currentLeagueId &&
       state.leagues.some((l) => l.user_leagueid === sel.leagueId)) {
     state.currentLeagueId = sel.leagueId;
-    ui.leagueSelect.value = String(sel.leagueId);
+    setSelectedLeagueCard(ui.leagueStripTrack, sel.leagueId);
     fantasyChanged = true;
   }
   if (sel.gamedayId && sel.gamedayId !== state.currentGamedayId &&
       (sel.gamedayId === "overall" || state.events.some((e) => e.gameday_id === sel.gamedayId))) {
     state.currentGamedayId = sel.gamedayId;
-    ui.eventSelect.value = String(sel.gamedayId);
+    setSelectedCard(state.currentGamedayId);
     fantasyChanged = true;
   }
   const newPage = sel.page || 1;
@@ -1990,15 +2173,12 @@ window.addEventListener("popstate", () => {
   const bLeague = params.get("bleague");
   if (bLeague && bLeague !== String(state.currentBracketLeagueId)) {
     state.currentBracketLeagueId = bLeague;
-    if (ui.bracketLeagueSelect) ui.bracketLeagueSelect.value = bLeague;
+    setSelectedLeagueCard(ui.bracketLeagueStripTrack, bLeague);
     bracketChanged = true;
   }
   const bEvent = params.get("bevent");
   if (bEvent && bEvent !== state.currentBracketEventId) {
     state.currentBracketEventId = bEvent;
-    if (ui.bracketEventSelect && ui.bracketEventSelect.options.length) {
-      ui.bracketEventSelect.value = bEvent;
-    }
     bracketChanged = true;
   }
   const bPage = Number(params.get("bpage")) || 1;
@@ -2008,7 +2188,6 @@ window.addEventListener("popstate", () => {
   }
   if (bracketChanged && state.view === "brackets") loadBracketLeaderboard();
 });
-ui.refresh.addEventListener("click", () => loadLeague());
 
 // ===============================================================
 // ------- Brackets -------
@@ -2080,21 +2259,27 @@ function findBracketEvent(eventId) {
   return events.find((e) => e.id === eventId || e.jointEventId === eventId) || null;
 }
 
-function populateBracketLeagueSelect() {
-  ui.bracketLeagueSelect.innerHTML = "";
+function renderBracketLeagueStrip() {
+  const track = ui.bracketLeagueStripTrack;
+  track.innerHTML = "";
   const leagues = state.bracketLeaguesByTournament.get(state.currentTournamentId) || [];
-  for (const l of leagues) {
-    const opt = document.createElement("option");
-    opt.value = l.leagueId;
-    opt.textContent = `${l.name} · ${l.memberCount.toLocaleString()} members`;
-    ui.bracketLeagueSelect.appendChild(opt);
-  }
-  if (leagues.some((l) => String(l.leagueId) === String(state.currentBracketLeagueId))) {
-    ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
-  } else if (leagues.length) {
+  if (!leagues.some((l) => String(l.leagueId) === String(state.currentBracketLeagueId)) && leagues.length) {
     state.currentBracketLeagueId = String(leagues[0].leagueId);
-    ui.bracketLeagueSelect.value = state.currentBracketLeagueId;
   }
+  for (const l of leagues) {
+    track.appendChild(buildLeagueCard({
+      id: l.leagueId,
+      name: l.name,
+      members: l.memberCount,
+      rank: l.selfRank,
+      isAdmin: false,
+      isPrivate: l.type === "private",
+      selected: String(l.leagueId) === String(state.currentBracketLeagueId),
+    }));
+  }
+  track.hidden = false;
+  const sel = track.querySelector(".league-card.is-selected");
+  if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
 }
 
 function migrateBracketEventId() {
@@ -2149,13 +2334,9 @@ async function bootstrapBrackets() {
       ensureBracketTournament(state.currentTournamentId),
       ensureBracketLeagues(state.currentTournamentId),
     ]);
-    populateBracketLeagueSelect();
     migrateBracketEventId();
     alignBracketToFantasyEvent();
-    populateBracketEventSelect();
-    if (state.currentBracketLeagueId) ui.bracketLeagueSelect.value = String(state.currentBracketLeagueId);
-    if (state.currentBracketEventId) ui.bracketEventSelect.value = String(state.currentBracketEventId);
-    ui.bracketControls.hidden = false;
+    renderBracketLeagueStrip();
     saveBracketSelection();
     await loadBracketLeaderboard();
   } catch (err) {
@@ -2617,28 +2798,17 @@ for (const t of ui.tabs) {
   t.addEventListener("click", () => setView(t.dataset.view));
 }
 
-ui.bracketLeagueSelect.addEventListener("change", () => {
-  state.currentBracketLeagueId = ui.bracketLeagueSelect.value;
+ui.bracketLeagueStripTrack.addEventListener("click", (e) => {
+  const card = e.target.closest(".league-card");
+  if (!card) return;
+  const id = card.dataset.leagueId;
+  if (!id || id === String(state.currentBracketLeagueId)) return;
+  state.currentBracketLeagueId = id;
   state.currentBracketPage = 1;
+  setSelectedLeagueCard(ui.bracketLeagueStripTrack, id);
   saveBracketSelection({ pushHistory: true });
   loadBracketLeaderboard();
 });
-ui.bracketEventSelect.addEventListener("change", () => {
-  state.currentBracketEventId = ui.bracketEventSelect.value;
-  state.currentBracketPage = 1;
-  // Mirror to fantasy by event name.
-  const fMatch = fantasyEventForBracketId(state.currentBracketEventId);
-  state.currentGamedayId = fMatch ? fMatch.gameday_id : "overall";
-  state.currentPage = 1;
-  if (ui.eventSelect && ui.eventSelect.options.length) {
-    ui.eventSelect.value = String(state.currentGamedayId);
-  }
-  saveBracketSelection({ pushHistory: true });
-  saveSelection();
-  state.fantasyDirty = true;
-  loadBracketLeaderboard();
-});
-ui.bracketRefresh.addEventListener("click", () => loadBracketLeaderboard());
 ui.bracketPrev.addEventListener("click", () => {
   if (state.currentBracketPage <= 1) return;
   state.currentBracketPage -= 1;
