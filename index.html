@@ -285,6 +285,18 @@
     padding: 10px 12px; border-bottom: 1px solid var(--border);
     background: var(--soft);
   }
+  thead th.sortable { padding: 0; }
+  thead th.sortable .sort-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    width: 100%; padding: 10px 12px;
+    background: none; border: 0; cursor: pointer;
+    font: inherit; color: inherit; letter-spacing: inherit;
+    text-transform: inherit; text-align: inherit;
+  }
+  thead th.sortable .sort-btn:hover { color: var(--text); }
+  thead th.sortable .sort-ind::before { content: ""; display: inline-block; width: 8px; }
+  thead th.sortable.is-active { color: var(--text); }
+  thead th.sortable.is-active .sort-ind::before { content: "▼"; font-size: 9px; }
   tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--soft); }
@@ -317,6 +329,10 @@
   .pts { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .pts-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .pts-cell .rank-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .pts-warn {
+    margin-left: 2px; font-size: 11px; color: var(--warn);
+    cursor: help; font-weight: 700;
+  }
   .player-name { font-weight: 600; }
   .player-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .tier-cell { display: flex; flex-direction: column; gap: 10px; }
@@ -708,8 +724,8 @@
         <tr>
           <th class="rank">#</th>
           <th>Team</th>
-          <th class="pts">Event pts</th>
-          <th class="pts">Season pts</th>
+          <th class="pts sortable" data-sort-key="event"><button type="button" class="sort-btn">Event pts<span class="sort-ind" aria-hidden="true"></span></button></th>
+          <th class="pts sortable" data-sort-key="season"><button type="button" class="sort-btn">Season pts<span class="sort-ind" aria-hidden="true"></span></button></th>
           <th>Men</th>
           <th>Women</th>
         </tr>
@@ -832,7 +848,6 @@
 const API = "https://gamesapi.worldsurfleague.com";
 const ENTITY = "ed0t4n$3!!";
 const TOUR_ID = 1;
-const PHASE_EVENT = 1;
 const TEAM_FETCH_CONCURRENCY = 5;
 const RANK_PAGE_SIZE = 10;
 const ASSETS = `${API}/static-assets/fantasy/static/build/images`;
@@ -873,6 +888,11 @@ const state = {
   // that looked duplicated across teams.
   fantasyLoadId: 0,
   bracketLoadId: 0,
+  // Which fantasy column the leaderboard is sorted by. The leaguesLB feed
+  // uses gameday_id in the path to choose: the current event id sorts by event
+  // pts, gameday_id=0 sorts by season pts. There is no asc/desc toggle — the
+  // feed is always best-first.
+  fantasySort: "event",
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -1127,6 +1147,17 @@ async function bootstrap() {
       const tid = privateLeagues.find((l) => l.user_teamid)?.user_teamid;
       if (tid) state.userTeamId = tid;
     }
+    // Last-resort: pull the UserId out of the JWT so the leaderboard feed can
+    // identify the current user even if they joined zero private leagues.
+    if (!state.userTeamId && state.token) {
+      try {
+        const payload = JSON.parse(atob(state.token.split(".")[1]));
+        const claim = payload?.["http://schemas.microsoft.com/ws/2008/06/identity/claims/userdata"];
+        const userdata = typeof claim === "string" ? JSON.parse(claim) : claim;
+        const uid = Number(userdata?.UserId);
+        if (Number.isFinite(uid) && uid > 0) state.userTeamId = uid;
+      } catch (e) { /* token unreadable — leave userTeamId null */ }
+    }
     const publicJoined = (leagueListData?.Value?.data ?? [])
       .filter((l) => l.IsJoined === 1)
       .map((l) => ({
@@ -1137,8 +1168,23 @@ async function bootstrap() {
         is_admin: 0,
         rank: l.Rank,
         cur_points: l.Points,
+        // legtype is the path segment used by the leaguesLB feed and matches
+        // LeagueType from the public-league-list endpoint (1=global, 2=country,
+        // 3=sponsor/code-based). Stash it so the leaderboard fetch can build
+        // the right URL.
+        legtype: l.LeagueType,
       }));
-    state.leagues = [...publicJoined, ...privateLeagues];
+    // Private code-based leagues from /private/leagues are LeagueType 3 in the
+    // feed namespace.
+    for (const lg of privateLeagues) lg.legtype = 3;
+    // Some leagues (sponsor/code-based public ones like Florence Marine X) come
+    // back in *both* the public-list response and the private-leagues response,
+    // so dedupe by user_leagueid to avoid rendering the league card twice.
+    // Prefer the public-list version since it carries an actual rank/points
+    // value while the private-list rows are usually nulls for those leagues.
+    const seen = new Set(publicJoined.map((l) => String(l.user_leagueid)));
+    const uniquePrivate = privateLeagues.filter((l) => !seen.has(String(l.user_leagueid)));
+    state.leagues = [...publicJoined, ...uniquePrivate];
     state.events = schedule?.Value ?? [];
     state.countries.clear();
     for (const c of countries?.Value ?? []) {
@@ -1370,6 +1416,122 @@ function setSelectedCard(gamedayId) {
   }
 }
 
+function leagueLegtype(leagueId) {
+  const lg = state.leagues.find((l) => String(l.user_leagueid) === String(leagueId));
+  return lg?.legtype ?? null;
+}
+
+function updateFantasySortIndicators() {
+  for (const th of document.querySelectorAll("#ranking thead th.sortable")) {
+    th.classList.toggle("is-active", th.dataset.sortKey === state.fantasySort);
+  }
+}
+
+// Fetch the leaguesLB feed and slice it for pagination. Returns
+// { rows, hasNextPage, all } where rows is the (possibly self-pinned) page
+// slice and all is the full feed (≤500 entries). The active sort decides
+// which feed drives ordering and pagination; the other gameday's feed is
+// fetched alongside so each row can carry both event_pts and season_pts —
+// pts cells display straight from the feed and never get overwritten by
+// view-other-team's live values, so the active column stays monotonic.
+//
+// The leaguesLB feed only exists for public/sponsor/country leagues; pure
+// private code-based leagues return 403 and we fall back to /private/rank,
+// which returns the same shape (just smaller).
+async function fetchLeaguePtsFeed(leagueId, gameday, legtype) {
+  if (legtype == null) return null;
+  try {
+    const feed = await feedGet(`/fantasy/feeds/leaguesLB/${TOUR_ID}_${leagueId}_${gameday}_${legtype}.json`);
+    return feed?.Value ?? null;
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchLeagueFeedRows(leagueId, sortKey) {
+  const legtype = leagueLegtype(leagueId);
+  const eventGameday = state.currentGamedayId;
+  const inOverall = String(eventGameday) === "overall" || eventGameday === 0;
+  const primaryGd = sortKey === "season" || inOverall ? 0 : eventGameday;
+  const secondaryGd = sortKey === "season" ? eventGameday : 0;
+  const needSecondary = !inOverall && secondaryGd !== primaryGd;
+
+  // Primary feed drives ordering and pagination. Secondary fills in the other
+  // pts column. Run them in parallel.
+  const [primary, secondary] = await Promise.all([
+    fetchLeaguePtsFeed(leagueId, primaryGd, legtype),
+    needSecondary ? fetchLeaguePtsFeed(leagueId, secondaryGd, legtype) : Promise.resolve(null),
+  ]);
+
+  let all = primary;
+  let secondaryPts = null;
+  if (secondary) {
+    secondaryPts = new Map();
+    for (const r of secondary) secondaryPts.set(r.user_id, r.points);
+  }
+
+  if (all == null) {
+    // /private/rank fallback for code-based private leagues with no static
+    // feed. phaseid=2/gameday=1 sorts by season; phaseid=1 sorts by event.
+    const apiPhase = primaryGd === 0 ? 2 : 1;
+    const apiGameday = primaryGd === 0 ? 1 : primaryGd;
+    const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
+      opt_type: 2,
+      page_no: 1,
+      top_no: 500,
+      league_id: leagueId,
+      tour_id: TOUR_ID,
+      gameday_id: apiGameday,
+      phaseid: apiPhase,
+    });
+    all = (ranks?.Value?.data ?? []).map((r) => ({
+      ...r,
+      points: primaryGd === 0 ? r.tour_pt ?? r.overall_point ?? null : r.gd_pt ?? null,
+    }));
+  }
+
+  // Annotate each row with both event_pts and season_pts so the renderer can
+  // populate both pts columns from feed data alone.
+  const annotate = (r) => {
+    const otherPts = secondaryPts ? secondaryPts.get(r.user_id) ?? null : null;
+    return {
+      ...r,
+      event_pts: primaryGd === 0 ? otherPts : r.points,
+      season_pts: primaryGd === 0 ? r.points : otherPts,
+    };
+  };
+  all = all.map(annotate);
+  const start = (state.currentPage - 1) * RANK_PAGE_SIZE;
+  const slice = all.slice(start, start + RANK_PAGE_SIZE);
+  const hasNextPage = start + RANK_PAGE_SIZE < all.length;
+  // Self-pin: if the user is on page 1 but ranked below the slice, pin them
+  // at the top so they're always visible.
+  let rows = slice;
+  if (state.userTeamId != null) {
+    const myEntry = all.find((r) => r.user_id === state.userTeamId);
+    if (myEntry) {
+      if (myEntry.team_name) state.userTeamName = myEntry.team_name;
+      if (state.currentPage === 1 && !slice.includes(myEntry)) {
+        rows = [myEntry, ...slice];
+      }
+    } else if (state.currentPage === 1) {
+      // The leaguesLB feed caps at 500 entries; users ranked deeper still
+      // need to see their own row. Synthesise one from the league listing.
+      const lg = state.leagues.find((l) => String(l.user_leagueid) === String(leagueId));
+      rows = [{
+        user_id: state.userTeamId,
+        team_name: state.userTeamName || "Your team",
+        user_name: "",
+        rank: lg?.rank ?? null,
+        points: lg?.cur_points ?? null,
+        event_pts: null,
+        season_pts: lg?.cur_points ?? null,
+      }, ...slice];
+    }
+  }
+  return { rows, hasNextPage, all };
+}
+
 // ------- league load -------
 async function loadLeague() {
   if (!state.currentLeagueId || !state.currentGamedayId) return;
@@ -1381,6 +1543,7 @@ async function loadLeague() {
   setStatus("Loading league rankings…");
   ui.rankingPanel.hidden = true;
   ui.rankingBody.innerHTML = "";
+  updateFantasySortIndicators();
 
   const event = state.events.find((e) => e.gameday_id === state.currentGamedayId);
   if (event && event.gd_islocked === 0 && event.gd_iscurrent !== 1) {
@@ -1398,23 +1561,16 @@ async function loadLeague() {
   }
 
   const prestage = isFantasyPrestage(event);
+  // Prestage events have no event-pts ordering yet, so fall back to season
+  // ordering for the member list. The header still reflects the user's pick.
+  const sortKey = prestage ? "season" : state.fantasySort;
 
   try {
     if (!prestage) await loadSurferFeed(state.currentGamedayId);
     if (isStale()) return;
-    const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
-      opt_type: 2,
-      page_no: state.currentPage,
-      top_no: RANK_PAGE_SIZE,
-      league_id: state.currentLeagueId,
-      tour_id: TOUR_ID,
-      gameday_id: state.currentGamedayId,
-      phaseid: PHASE_EVENT,
-    });
+    const { rows, hasNextPage } = await fetchLeagueFeedRows(state.currentLeagueId, sortKey);
     if (isStale()) return;
-    const rows = ranks?.Value?.data ?? [];
-    state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
-    ensureSelfInRows(rows);
+    state.hasNextPage = hasNextPage;
     updatePagination();
 
     if (!rows.length) {
@@ -1434,8 +1590,7 @@ async function loadLeague() {
         tr.cells[4].replaceChildren(renderPrestageGenderCell(event, "M"));
         tr.cells[5].replaceChildren(renderPrestageGenderCell(event, "F"));
       }
-      const my = (state.userGuid || "").toLowerCase();
-      const youRow = rows.find((r) => (r.guid || "").toLowerCase() === my);
+      const youRow = rows.find((r) => state.userTeamId != null && r.user_id === state.userTeamId);
       if (youRow && state.userGuid) {
         try {
           const team = await apiGet(`/fantasy/services/gameplay/user/${encodeURIComponent(state.userGuid)}/get-team`, {
@@ -1496,29 +1651,6 @@ function isFantasyPrestage(event) {
   return !!(event && event.gd_iscurrent === 1 && event.gd_islocked === 0);
 }
 
-function ensureSelfInRows(rows) {
-  const my = (state.userGuid || "").toLowerCase();
-  if (!my) return rows;
-  const youRow = rows.find((r) => (r.guid || "").toLowerCase() === my);
-  if (youRow) {
-    if (youRow.team_name) state.userTeamName = youRow.team_name;
-    if (!state.userTeamId && youRow.user_id) state.userTeamId = youRow.user_id;
-    return rows;
-  }
-  if (state.currentPage !== 1) return rows;
-  const leagueEntry = state.leagues.find((l) => String(l.user_leagueid) === String(state.currentLeagueId));
-  if (!leagueEntry) return rows;
-  rows.push({
-    user_id: state.userTeamId,
-    guid: state.userGuid,
-    rank: leagueEntry.rank ?? null,
-    team_name: state.userTeamName || "Your team",
-    user_name: "",
-    overall_point: leagueEntry.cur_points ?? null,
-  });
-  return rows;
-}
-
 function isBracketEventOpen(ev) {
   return !!(ev && (ev.status === "open" || ev.jointEventStatus === "open"));
 }
@@ -1529,20 +1661,11 @@ async function loadLeagueOverall(passedLoadId) {
   setStatus("Loading season standings…");
   ui.rankingPanel.hidden = true;
   ui.rankingBody.innerHTML = "";
+  updateFantasySortIndicators();
   try {
-    const ranks = await apiGet(`/fantasy/services/league/private/${encodeURIComponent(state.userGuid)}/private/rank`, {
-      opt_type: 2,
-      page_no: state.currentPage,
-      top_no: RANK_PAGE_SIZE,
-      league_id: state.currentLeagueId,
-      tour_id: TOUR_ID,
-      gameday_id: 1,
-      phaseid: 2,
-    });
+    const { rows, hasNextPage } = await fetchLeagueFeedRows(state.currentLeagueId, "season");
     if (isStale()) return;
-    const rows = ranks?.Value?.data ?? [];
-    state.hasNextPage = rows.length >= RANK_PAGE_SIZE;
-    ensureSelfInRows(rows);
+    state.hasNextPage = hasNextPage;
     updatePagination();
     if (!rows.length) {
       ui.rankingPanel.hidden = false;
@@ -1562,8 +1685,7 @@ async function loadLeagueOverall(passedLoadId) {
 
 function renderOverallRows(rows) {
   ui.rankingBody.innerHTML = "";
-  const my = (state.userGuid || "").toLowerCase();
-  const isYou = (r) => my && (r.guid || "").toLowerCase() === my;
+  const isYou = (r) => state.userTeamId != null && r.user_id === state.userTeamId;
   const youRow = rows.find(isYou);
   const others = rows.filter((r) => !isYou(r));
   const ordered = youRow ? [youRow, ...others] : others;
@@ -1575,6 +1697,7 @@ function renderOverallRows(rows) {
       tr.classList.add("is-you");
       if (!pinnedYou) { tr.classList.add("self-pinned"); pinnedYou = true; }
     }
+    const pts = row.season_pts ?? row.overall_point ?? row.points;
     tr.innerHTML = `
       <td class="rank">${row.rank ?? "—"}</td>
       <td>
@@ -1582,7 +1705,7 @@ function renderOverallRows(rows) {
         <div class="player-meta">${escape(row.user_name || "")}</div>
       </td>
       <td class="pts">—</td>
-      <td class="pts">${formatPts(row.overall_point)}</td>
+      <td class="pts">${formatPts(pts)}</td>
       <td class="gender-col" data-gender-label="Men"></td>
       <td class="gender-col" data-gender-label="Women"></td>
     `;
@@ -1600,8 +1723,7 @@ function updatePagination() {
 
 function renderSkeleton(rows) {
   ui.rankingBody.innerHTML = "";
-  const my = (state.userGuid || "").toLowerCase();
-  const isYou = (r) => my && (r.guid || "").toLowerCase() === my;
+  const isYou = (r) => state.userTeamId != null && r.user_id === state.userTeamId;
   const youRow = rows.find(isYou);
   const others = rows.filter((r) => !isYou(r));
   const ordered = youRow ? [youRow, ...others] : others;
@@ -1649,8 +1771,12 @@ function renderRow(row, team, errorMsg) {
     const nameEl = tr.cells[1].querySelector(".player-name");
     if (nameEl) nameEl.textContent = team.team_name;
   }
-  tr.cells[2].innerHTML = renderPtsCell(team.gd_pt, team.gd_rank);
-  tr.cells[3].innerHTML = renderPtsCell(team.tour_pt, team.tour_rank);
+  // Show live pts. The leaguesLB feed used for sorting is occasionally stale
+  // (a few minutes behind view-other-team) — when the live pts disagrees with
+  // the feed snapshot we mark it with an asterisk so the user knows the row
+  // ordering may not match the live numbers in the cell.
+  tr.cells[2].innerHTML = renderPtsCell(team.gd_pt, team.gd_rank, row.event_pts);
+  tr.cells[3].innerHTML = renderPtsCell(team.tour_pt, team.tour_rank, row.season_pts);
 
   const eliminated = new Set(team.gd_eliminated_player || []);
   const powerSurfers = new Set([team.male_captainid, team.female_captainid].filter(Boolean));
@@ -1660,10 +1786,18 @@ function renderRow(row, team, errorMsg) {
   tr.cells[5].replaceChildren(renderGenderCell(groups.F, powerSurfers, eliminated, prestage));
 }
 
-function renderPtsCell(pts, rank) {
+const PTS_MISMATCH_TITLE =
+  "League leaderboard pts disagree with this team's live pts — the WSL feed is occasionally stale, so this row may be in the wrong place.";
+
+function renderPtsCell(pts, rank, expectedPts) {
   const ptsText = formatPts(pts);
   const rankText = Number.isFinite(rank) ? `rank #${rank.toLocaleString()}` : "";
-  return `<div class="pts-cell"><span>${ptsText}</span>${rankText ? `<span class="rank-sub">${rankText}</span>` : ""}</div>`;
+  // Round to 2dp before comparing — feed and live both render at that precision
+  // and a sub-cent drift should not trigger the warning.
+  const drift = Number.isFinite(pts) && Number.isFinite(expectedPts)
+    && Math.round(pts * 100) !== Math.round(expectedPts * 100);
+  const star = drift ? `<sup class="pts-warn" title="${PTS_MISMATCH_TITLE}">*</sup>` : "";
+  return `<div class="pts-cell"><span>${ptsText}${star}</span>${rankText ? `<span class="rank-sub">${rankText}</span>` : ""}</div>`;
 }
 
 const TIER_LABEL = { 1: "A", 2: "B", 3: "C", A: "A", B: "B", C: "C" };
@@ -2184,6 +2318,17 @@ ui.nextPage.addEventListener("click", () => {
   if (!state.hasNextPage) return;
   state.currentPage += 1;
   saveSelection({ pushHistory: true });
+  loadLeague();
+});
+
+document.querySelector("#ranking thead").addEventListener("click", (e) => {
+  const th = e.target.closest("th.sortable");
+  if (!th) return;
+  const key = th.dataset.sortKey;
+  if (!key || key === state.fantasySort) return;
+  state.fantasySort = key;
+  state.currentPage = 1;
+  saveSelection();
   loadLeague();
 });
 
