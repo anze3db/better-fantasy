@@ -27,16 +27,17 @@
 <style>
   :root {
     color-scheme: light;
-    --bg: #f7f7f5;
+    --bg: #f4f6f3;
     --panel: #ffffff;
-    --soft: #fafaf7;
-    --border: #e3e3df;
-    --text: #1c1c1a;
-    --muted: #6b6b66;
-    --accent: #0b66c2;
-    --accent-soft: #e8f0fa;
+    --soft: #f0f4f0;
+    --border: #dce2dc;
+    --border-soft: #edf1ed;
+    --text: #191d1b;
+    --muted: #69716c;
+    --accent: #167c80;
+    --accent-soft: #dff0ef;
     --input-bg: #ffffff;
-    --avatar-bg: #efefea;
+    --avatar-bg: #e9eee9;
     --dot-bg: #ffffff;
     --gender-m: #1f6cd9;
     --gender-f: #c4359e;
@@ -45,21 +46,22 @@
     --tier-c: #6b4fbb;
     --warn: #b3261e;
     --power: #f0c000;
-    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --shadow: 0 10px 30px rgba(29,42,34,.06), 0 1px 2px rgba(29,42,34,.06);
   }
   [data-theme="dark"] {
     color-scheme: dark;
-    --bg: #14141a;
-    --panel: #1d1d24;
-    --soft: #25252e;
-    --border: #2e2e36;
-    --text: #ececee;
-    --muted: #8b8b95;
-    --accent: #5fa8e5;
-    --accent-soft: #1c2c3f;
-    --input-bg: #25252e;
-    --avatar-bg: #2e2e36;
-    --dot-bg: #1d1d24;
+    --bg: #101311;
+    --panel: #1a1d1b;
+    --soft: #222722;
+    --border: #323a33;
+    --border-soft: #252b26;
+    --text: #f0f2ef;
+    --muted: #9aa39c;
+    --accent: #69b7ad;
+    --accent-soft: #193a38;
+    --input-bg: #232823;
+    --avatar-bg: #303730;
+    --dot-bg: #1a1d1b;
     --gender-m: #6aa8ff;
     --gender-f: #e066c2;
     --tier-a: #4eb877;
@@ -67,7 +69,7 @@
     --tier-c: #a08fe0;
     --warn: #f06a63;
     --power: #f7c93a;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.5);
+    --shadow: 0 16px 40px rgba(0,0,0,.28), 0 1px 2px rgba(0,0,0,.35);
   }
   * { box-sizing: border-box; }
   html { overflow-x: clip; overflow-x: hidden; }
@@ -86,16 +88,21 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   body {
-    background: var(--bg);
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 10%, transparent), transparent 30rem),
+      var(--bg);
     color: var(--text);
     font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
   header {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 22px; background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 12px 22px;
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border-bottom: 1px solid var(--border-soft);
+    backdrop-filter: blur(14px);
   }
   header h1 {
-    margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+    margin: 0; font-size: 15px; font-weight: 700; letter-spacing: 0;
     flex: 0 0 auto; white-space: nowrap;
   }
   header .right { display: flex; gap: 8px; align-items: center; flex: 0 0 auto; margin-left: auto; }
@@ -110,14 +117,14 @@
   .event-strip-track::-webkit-scrollbar { height: 6px; }
   .event-strip-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
   .event-strip-arrow {
-    flex: 0 0 22px; padding: 0; align-self: center; height: 60px;
-    background: transparent; border: none; border-radius: 6px;
+    flex: 0 0 28px; padding: 0; align-self: center; height: 52px;
+    background: transparent; border: none; border-radius: 8px;
     color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
   .event-strip-arrow:hover { background: var(--soft); color: var(--text); }
   .event-strip-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
-  .league-strip { display: flex; align-items: stretch; gap: 6px; margin-bottom: 14px; }
+  .league-strip { display: flex; align-items: stretch; gap: 8px; margin-bottom: 16px; }
   .league-strip[hidden] { display: none; }
   .league-strip-track {
     display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0;
@@ -128,14 +135,14 @@
   .league-strip-track::-webkit-scrollbar { height: 6px; }
   .league-strip-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
   .league-card {
-    flex: 0 0 240px; max-width: 240px; min-width: 0;
+    flex: 0 0 228px; max-width: 228px; min-width: 0;
     scroll-snap-align: start;
-    background: var(--soft); color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; cursor: pointer; font: inherit; text-align: left;
+    background: color-mix(in srgb, var(--panel) 72%, var(--soft)); color: var(--text);
+    border: 1px solid var(--border-soft); border-radius: 8px;
+    padding: 10px 12px; cursor: pointer; font: inherit; text-align: left;
     display: flex; align-items: center; gap: 10px;
   }
-  .league-card:hover { background: var(--panel); }
+  .league-card:hover { background: var(--panel); border-color: var(--border); }
   .league-card.is-selected {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 12%, var(--panel));
@@ -158,14 +165,14 @@
   }
   .league-badge.admin { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); }
   .event-card {
-    flex: 0 0 220px; max-width: 220px; min-width: 0;
+    flex: 0 0 204px; max-width: 204px; min-width: 0;
     scroll-snap-align: start;
-    background: var(--soft); color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 8px 10px; cursor: pointer; font: inherit; text-align: left;
-    display: flex; flex-direction: column; gap: 2px;
+    background: color-mix(in srgb, var(--panel) 72%, var(--soft)); color: var(--text);
+    border: 1px solid var(--border-soft); border-radius: 8px;
+    padding: 9px 11px; cursor: pointer; font: inherit; text-align: left;
+    display: flex; flex-direction: column; gap: 3px;
   }
-  .event-card:hover { background: var(--panel); }
+  .event-card:hover { background: var(--panel); border-color: var(--border); }
   .event-card.is-selected {
     border-color: var(--accent);
     background: color-mix(in srgb, var(--accent) 12%, var(--panel));
@@ -199,9 +206,9 @@
   main > .tabs { margin: 0 0 18px; }
   .view-tabs {
     width: 100%;
-    background: var(--soft);
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 64%, var(--soft));
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
     padding: 4px;
     gap: 4px;
   }
@@ -209,7 +216,7 @@
     flex: 1 1 0; min-width: 0;
     text-align: center;
     padding: 8px 12px; font-size: 14px;
-    border-radius: 7px;
+    border-radius: 6px;
   }
   .view-tabs .tab[aria-selected="true"] {
     background: var(--panel); color: var(--text);
@@ -228,7 +235,7 @@
   }
   button {
     background: var(--panel); color: var(--text); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer;
+    border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer;
   }
   button:hover { background: var(--soft); }
   button.primary { background: var(--accent); color: white; border-color: var(--accent); }
@@ -236,7 +243,7 @@
   button.danger { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 35%, var(--border)); }
   button.danger:hover { background: color-mix(in srgb, var(--warn) 12%, var(--panel)); }
   button.icon-btn {
-    padding: 6px; width: 32px; height: 32px;
+    padding: 6px; width: 34px; height: 34px;
     display: inline-flex; align-items: center; justify-content: center;
   }
   button.icon-btn svg { width: 16px; height: 16px; display: block; }
@@ -248,7 +255,7 @@
     display: inline-flex; align-items: center; gap: 8px;
     padding: 8px 14px; align-self: flex-start;
     background: var(--input-bg); color: var(--text);
-    border: 1px solid var(--border); border-radius: 999px;
+    border: 1px solid var(--border); border-radius: 8px;
     font: inherit; cursor: pointer;
   }
   .theme-pill:hover { background: var(--soft); }
@@ -256,8 +263,14 @@
   .theme-pill .theme-label-dark { display: none; }
   [data-theme="dark"] .theme-pill .theme-label-light { display: none; }
   [data-theme="dark"] .theme-pill .theme-label-dark { display: inline; }
-  main { max-width: 1400px; margin: 22px auto; padding: 0 22px; }
-  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); }
+  main { max-width: 1320px; margin: 18px auto 28px; padding: 0 22px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
   .controls {
     display: flex; gap: 14px; padding: 14px; align-items: end; flex-wrap: wrap;
     margin-bottom: 18px;
@@ -266,8 +279,8 @@
   .field label { font-size: 12px; color: var(--muted); }
   .field select, .field input, .field textarea {
     background: var(--input-bg); color: var(--text);
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 7px 10px; font: inherit; min-width: 240px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font: inherit; min-width: 240px;
   }
   .field select { min-width: 280px; }
   .badge {
@@ -281,14 +294,14 @@
   table { width: 100%; border-collapse: collapse; }
   thead th {
     text-align: left; font-size: 12px; font-weight: 600; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .03em;
-    padding: 10px 12px; border-bottom: 1px solid var(--border);
-    background: var(--soft);
+    text-transform: uppercase; letter-spacing: .04em;
+    padding: 11px 14px; border-bottom: 1px solid var(--border-soft);
+    background: color-mix(in srgb, var(--panel) 70%, var(--soft));
   }
   thead th.sortable { padding: 0; }
   thead th.sortable .sort-btn {
     display: inline-flex; align-items: center; gap: 4px;
-    width: 100%; padding: 10px 12px;
+    width: 100%; padding: 11px 14px;
     background: none; border: 0; cursor: pointer;
     font: inherit; color: inherit; letter-spacing: inherit;
     text-transform: inherit; text-align: inherit;
@@ -297,9 +310,9 @@
   thead th.sortable .sort-ind::before { content: ""; display: inline-block; width: 8px; }
   thead th.sortable.is-active { color: var(--text); }
   thead th.sortable.is-active .sort-ind::before { content: "▼"; font-size: 9px; }
-  tbody td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody td { padding: 14px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
   tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: var(--soft); }
+  tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, var(--panel)); }
   tbody tr.is-you { background: color-mix(in srgb, var(--accent) 10%, transparent); }
   tbody tr.is-you:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
   tbody tr.is-you .player-name::after {
@@ -325,7 +338,7 @@
   /* "you" row pinned to the top of a leaderboard when not naturally on the page */
   tbody tr.self-pinned td { border-bottom: 2px solid var(--accent); }
   tbody tr.self-pinned + tr td { padding-top: 16px; }
-  .rank { font-variant-numeric: tabular-nums; font-weight: 600; width: 50px; }
+  .rank { font-variant-numeric: tabular-nums; font-weight: 650; width: 50px; color: var(--muted); }
   .pts { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .pts-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
   .pts-cell .rank-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
@@ -333,27 +346,28 @@
     margin-left: 2px; font-size: 11px; color: var(--warn);
     cursor: help; font-weight: 700;
   }
-  .player-name { font-weight: 600; }
+  .player-name { font-weight: 650; }
   .player-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .tier-cell { display: flex; flex-direction: column; gap: 10px; }
+  .tier-cell { display: flex; flex-direction: column; gap: 7px; }
   .tier-group { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-  .tier-group-row { display: flex; flex-wrap: wrap; gap: 10px 8px; }
+  .tier-group-row { display: flex; flex-wrap: wrap; gap: 8px 7px; }
   .tier-group-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
   .surfer {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    width: 54px; font-size: 10px; line-height: 1.1; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    width: 48px; font-size: 10px; line-height: 1.1; color: var(--muted);
     cursor: pointer; user-select: none;
   }
   .surfer:focus-visible .avatar { outline: 2px solid var(--accent); outline-offset: 2px; }
   .surfer .avatar-wrap {
-    position: relative; width: 42px; height: 42px;
+    position: relative; width: 40px; height: 40px;
   }
   .surfer .avatar {
-    width: 42px; height: 42px; border-radius: 50%;
+    width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 13px; font-weight: 700; color: var(--text);
     background: var(--avatar-bg); overflow: hidden;
     border: 2px solid var(--border);
+    box-shadow: 0 1px 0 color-mix(in srgb, white 18%, transparent) inset;
     user-select: none;
   }
   .surfer .avatar { border-color: var(--tier-a); }
@@ -390,24 +404,27 @@
     border-radius: 1px; display: inline-block; vertical-align: middle;
     box-shadow: 0 0 0 1px var(--border);
   }
+  .surfer .country { display: none; }
   .tier-summary {
-    display: block; font-size: 10px; color: var(--muted); font-weight: 500;
-    margin-bottom: 2px; letter-spacing: .03em; text-transform: none;
+    display: inline-flex; align-items: center; align-self: flex-start;
+    font-size: 10px; color: var(--muted); font-weight: 600;
+    margin-bottom: 1px; letter-spacing: .03em; text-transform: none;
+    background: var(--soft); border-radius: 999px; padding: 2px 7px;
   }
   .empty { text-align: center; color: var(--muted); padding: 36px; line-height: 1.6; }
   .empty strong { color: var(--text); }
   .pagination {
     display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-    padding: 12px 16px; border-top: 1px solid var(--border);
+    padding: 12px 16px; border-top: 1px solid var(--border-soft);
   }
   .pagination .page-info { font-size: 12px; color: var(--muted); margin-right: auto; }
   .pagination button[disabled] { opacity: .4; cursor: not-allowed; }
-  .status { padding: 10px 14px; font-size: 13px; color: var(--muted); }
+  .status { padding: 8px 2px 14px; font-size: 13px; color: var(--muted); }
   .status.error { color: var(--warn); }
 
   dialog {
-    border: none; border-radius: 12px; padding: 0;
-    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    border: 1px solid var(--border-soft); border-radius: 14px; padding: 0;
+    box-shadow: 0 22px 70px rgba(0,0,0,.35);
     background: var(--panel); color: var(--text);
     max-width: 560px; width: 92%;
     max-height: 90dvh; max-height: 90vh;
@@ -548,24 +565,27 @@
   .bp-summary strong { color: var(--text); font-variant-numeric: tabular-nums; }
   .bp-block + .bp-block { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
   .bp-block-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-  .dialog-body { padding: 22px 24px; }
-  .dialog-body h2 { margin: 0 0 4px; font-size: 16px; }
+  .dialog-body { padding: 26px; }
+  .dialog-body h2 { margin: 0 0 6px; font-size: 18px; letter-spacing: 0; }
   .dialog-body p { color: var(--muted); margin: 0 0 18px; }
-  .dialog-body .field { margin-bottom: 14px; }
+  .dialog-body .field { margin-bottom: 16px; }
   .dialog-body textarea { min-height: 80px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
-  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
-  .quick-connect { margin-bottom: 14px; }
+  .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  .quick-connect {
+    margin-bottom: 18px; padding: 12px;
+    background: var(--soft); border: 1px solid var(--border-soft); border-radius: 8px;
+  }
   .qc-row {
     display: flex; align-items: center; gap: 10px;
     flex-wrap: wrap; margin-bottom: 8px;
   }
   .qc-row[hidden] { display: none; }
   .qc-row .meta-line { margin-top: 0; flex: 1; min-width: 0; }
-  .dialog-body p.meta-line { margin-top: 20px; margin-bottom: 0; line-height: 1.5; }
+  .dialog-body p.meta-line { margin-top: 12px; margin-bottom: 0; line-height: 1.55; }
   .qc-btn {
     display: inline-flex; align-items: center; justify-content: center;
     background: var(--accent); color: white; text-decoration: none;
-    padding: 8px 14px; border-radius: 8px; font-weight: 600;
+    padding: 8px 14px; border-radius: 8px; font-weight: 650;
     font-size: 13px; border: 1px solid var(--accent); cursor: grab;
     white-space: nowrap;
   }
@@ -575,6 +595,15 @@
   }
   .qc-btn-secondary:hover { background: var(--accent-soft); }
   .meta-line { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .setup-details {
+    margin-top: 16px; color: var(--muted);
+    border-top: 1px solid var(--border-soft); padding-top: 14px;
+  }
+  .setup-details summary {
+    cursor: pointer; font-size: 12px; font-weight: 650; color: var(--text);
+  }
+  .setup-details summary::marker { color: var(--muted); }
+  .setup-details p { margin-top: 10px; font-size: 12px; }
 
   /* mobile: turn each row into a card */
   @media (max-width: 760px) {
@@ -674,6 +703,22 @@
       font-size: 10px; color: var(--muted); font-weight: 700;
       text-transform: uppercase; letter-spacing: .06em;
       margin-bottom: 6px;
+    }
+    /* fantasy overall mode on mobile. The global .overall-mode display:none rules
+       lose here to "#ranking td { display: block }" (an ID outranks the class),
+       so we re-hide the per-event (3) and gender (5,6) columns at ID specificity
+       and surface the season total (col 4) in the pts slot — col 4 is otherwise
+       hidden on mobile. Collapse the men/women grid rows away too. */
+    #ranking.overall-mode tbody tr {
+      grid-template-areas: "rank info pts";
+    }
+    #ranking.overall-mode tbody td:nth-child(3),
+    #ranking.overall-mode tbody td:nth-child(5),
+    #ranking.overall-mode tbody td:nth-child(6) {
+      display: none;
+    }
+    #ranking.overall-mode tbody td:nth-child(4) {
+      display: block; grid-area: pts; align-self: center; text-align: right;
     }
     /* in overall mode there are no picks rows to render; collapse to a single row */
     table.bracket-overall.bracket-overall tbody tr {
@@ -830,14 +875,15 @@
         <button type="button" id="settings-cancel">Cancel</button>
         <button type="submit" class="primary">Save</button>
       </div>
-      <p class="meta-line">
-        How to find them manually: open <a href="https://fantasy.worldsurfleague.com" target="_blank" rel="noreferrer">fantasy.worldsurfleague.com</a> (logged in),
-        open DevTools → Application → Local Storage. Read the <code>wsl-game-token</code> entry —
-        it's a JSON object — copy <code>game_session_token</code> into the JWT field above and <code>guid</code> into the GUID field.
-        For brackets, copy the <code>userToken</code> entry's value into the bracket token field
-        (it only appears after you've used the brackets section of the WSL app at least once).
-        The bookmarklet does this automatically.
-      </p>
+      <details class="setup-details">
+        <summary>Manual setup steps</summary>
+        <p class="meta-line">
+          Open <a href="https://fantasy.worldsurfleague.com" target="_blank" rel="noreferrer">fantasy.worldsurfleague.com</a> while logged in,
+          then open DevTools → Application → Local Storage. Read the <code>wsl-game-token</code> entry, copy
+          <code>game_session_token</code> into the JWT field, and copy <code>guid</code> into the GUID field.
+          For brackets, copy the <code>userToken</code> entry's value into the bracket token field.
+        </p>
+      </details>
     </form>
   </div>
 </dialog>
@@ -1655,6 +1701,18 @@ function isBracketEventOpen(ev) {
   return !!(ev && (ev.status === "open" || ev.jointEventStatus === "open"));
 }
 
+// The latest event whose teams have been locked in. view-other-team at this
+// gameday returns each team's tour_pt — the running season total — and is
+// guaranteed to have a team to read (unlike an open current event a user may
+// not have picked yet).
+function latestPlayedGameday() {
+  const evs = state.events || [];
+  const played = [...evs].reverse().find((e) => e.gd_islocked === 1 || e.gd_iscurrent === 2);
+  if (played) return played.gameday_id;
+  const current = evs.find((e) => e.gd_iscurrent === 1);
+  return current?.gameday_id ?? null;
+}
+
 async function loadLeagueOverall(passedLoadId) {
   const loadId = passedLoadId ?? ++state.fantasyLoadId;
   const isStale = () => loadId !== state.fantasyLoadId;
@@ -1673,8 +1731,40 @@ async function loadLeagueOverall(passedLoadId) {
       setStatus("");
       return;
     }
-    renderOverallRows(rows);
+    // The season feed only carries a snapshot points value — and for private
+    // code-based leagues none at all (it 403s and the private/rank fallback
+    // returns null/per-event numbers). The authoritative season total is
+    // view-other-team's tour_pt, the same value the per-event view shows in its
+    // season column, so fetch each team at the latest played gameday and render
+    // tour_pt. The .overall-mode table hides the per-event + gender columns, so
+    // only the season total is shown.
+    const gameday = latestPlayedGameday();
+    if (gameday == null) {
+      // No event played yet — nothing to total; show the feed snapshot.
+      renderOverallRows(rows);
+      ui.rankingPanel.hidden = false;
+      setStatus("");
+      return;
+    }
+    renderSkeleton(rows);
     ui.rankingPanel.hidden = false;
+    setStatus(`Loading ${rows.length} teams…`);
+    await mapWithConcurrency(rows, TEAM_FETCH_CONCURRENCY, async (row) => {
+      if (isStale()) return;
+      try {
+        const team = await apiGet(`/fantasy/services/gameplay/view-other-team`, {
+          tourId: TOUR_ID,
+          gamedayId: gameday,
+          otherUserId: row.user_id,
+        });
+        if (isStale()) return;
+        renderRow(row, team?.Value?.data);
+      } catch (err) {
+        if (isStale()) return;
+        renderRow(row, null, err.message);
+      }
+    });
+    if (isStale()) return;
     setStatus("");
   } catch (err) {
     if (isStale()) return;
@@ -3082,6 +3172,30 @@ ui.bracketDetail.addEventListener("click", (e) => {
     ui.bracketDetail.close();
   }
 });
+
+// ------- refetch on resume -------
+// Data is only fetched on initial load. When the app is reopened from the
+// background (PWA resume, tab refocus, bfcache restore) the page isn't
+// reloaded, so standings can sit stale. Re-run the current view's loader when
+// the app becomes visible again. The WSL API is never cached (see SW), so this
+// always pulls live data.
+let lastResumeRefresh = Date.now();
+function refreshOnResume() {
+  if (document.visibilityState !== "visible") return;
+  if (!state.token || !state.userGuid) return;
+  // Debounce rapid visibility toggles so we don't hammer the API.
+  const now = Date.now();
+  if (now - lastResumeRefresh < 3000) return;
+  lastResumeRefresh = now;
+  if (state.view === "brackets") {
+    if (state.bracketEventsByTournament.has(state.currentTournamentId)) loadBracketLeaderboard();
+    else bootstrapBrackets();
+  } else if (state.currentLeagueId && state.currentGamedayId) {
+    loadLeague();
+  }
+}
+document.addEventListener("visibilitychange", refreshOnResume);
+window.addEventListener("pageshow", (e) => { if (e.persisted) refreshOnResume(); });
 
 // ------- service worker -------
 if ("serviceWorker" in navigator) {
